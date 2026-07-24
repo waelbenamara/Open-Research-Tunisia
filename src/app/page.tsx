@@ -47,7 +47,7 @@ export default async function DiscoverPage({
       : {}),
   };
 
-  const [projects, workshops, counts, areas] = await Promise.all([
+  const [projects, workshops, areas] = await Promise.all([
     filter === "workshops"
       ? []
       : db.project.findMany({
@@ -74,12 +74,6 @@ export default async function DiscoverPage({
           },
           orderBy: { startDate: "asc" },
         }),
-    Promise.all([
-      db.project.count({ where: { archived: false, isPublic: true, approvalStatus: "APPROVED" } }),
-      db.workshop.count({ where: { status: { in: ["OPEN", "RUNNING"] } } }),
-      db.user.count(),
-      db.output.count({ where: { status: "PUBLISHED" } }),
-    ]),
     db.project.findMany({
       where: { archived: false, approvalStatus: "APPROVED" },
       select: { area: true },
@@ -87,8 +81,6 @@ export default async function DiscoverPage({
       orderBy: { area: "asc" },
     }),
   ]);
-
-  const [projectCount, workshopCount, memberCount, publishedCount] = counts;
 
   type CardItem = {
     key: string;
@@ -152,11 +144,20 @@ export default async function DiscoverPage({
 
   const showHero = !term && filter === "all" && !area;
 
-  const heroStats = [
-    { n: projectCount, label: "Open research projects" },
-    { n: workshopCount, label: "Upcoming workshops" },
-    { n: memberCount, label: "Contributors and counting" },
-    { n: publishedCount, label: "Published outputs" },
+  // The promise of the platform, not its (young) numbers.
+  const heroPillars = [
+    {
+      title: "Contribute to real research",
+      body: "Projects post real open roles and anyone can apply — motivation counts more than credentials.",
+    },
+    {
+      title: "Learn the craft by doing",
+      body: "Free, live, recorded workshops, each teaching the skills a recruiting project actually needs.",
+    },
+    {
+      title: "Own a public record of your work",
+      body: "Every contribution is logged in the credit taxonomy journals use — authorship you can point to.",
+    },
   ];
 
   const qs = (patch: Partial<Search>) => {
@@ -172,18 +173,21 @@ export default async function DiscoverPage({
   return (
     <Shell className="pb-24">
       {showHero ? (
-        <div className="grid items-end gap-15 border-b border-line pb-12 pt-16 md:grid-cols-[1.4fr_1fr]">
+        <div className="grid items-center gap-14 border-b border-line pb-14 pt-16 md:grid-cols-[1.45fr_1fr]">
           <div className="flex flex-col gap-5">
-            <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brick">
-              An open initiative · Est. 2026
+            <div className="flex items-center gap-2.5">
+              <span className="inline-block h-[9px] w-[9px] bg-brick" aria-hidden />
+              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brick">
+                An open initiative · Tunisia
+              </span>
             </div>
-            <h1 className="font-serif text-[52px] font-medium leading-[1.08] balance">
-              Research, open to everyone in Tunisia.
+            <h1 className="font-serif text-[54px] font-medium leading-[1.06] balance">
+              Research shouldn&apos;t require permission.
             </h1>
             <p className="max-w-[52ch] text-[17px] leading-[1.65] text-ink-3 pretty">
-              Join real research projects as a contributor — no title required. Learn the craft
-              through hands-on workshops, build a public record of your work, and help publish
-              research that matters.
+              Join real research projects as a contributor — no title, no affiliation, no
+              gatekeeper. Learn the craft in hands-on workshops and build a public, verifiable
+              record of the work you do.
             </p>
             {!user ? (
               <div className="mt-1 flex gap-3">
@@ -208,16 +212,21 @@ export default async function DiscoverPage({
               </div>
             )}
           </div>
-          <div className="flex flex-col border-l border-line pl-9">
-            {heroStats.map((s) => (
-              <div
-                key={s.label}
-                className="flex items-baseline gap-3 border-b border-line-soft py-3"
-              >
-                <div className="min-w-[64px] font-serif text-[34px] font-medium">{s.n}</div>
-                <div className="text-[13px] text-ink-4">{s.label}</div>
+          <div className="flex flex-col gap-6 border-l border-line pl-9">
+            {heroPillars.map((p, i) => (
+              <div key={p.title} className="flex gap-4">
+                <div className="font-serif text-[26px] font-medium leading-none text-brick" aria-hidden>
+                  {i + 1}
+                </div>
+                <div>
+                  <div className="text-[14.5px] font-semibold leading-snug">{p.title}</div>
+                  <p className="mt-1 text-[13px] leading-[1.6] text-ink-4 pretty">{p.body}</p>
+                </div>
               </div>
             ))}
+            <div className="mt-1 text-[12.5px] text-muted">
+              How it works, in full — <Link href="/about">about the initiative</Link>.
+            </div>
           </div>
         </div>
       ) : null}
