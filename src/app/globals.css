@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@theme {
+  /* Surfaces — warm paper, not white. Straight from the design. */
+  --color-paper: #faf8f3;
+  --color-card: #fffefb;
+  --color-sand: #f4f0e6;
+  --color-tint: #f2eee3;
+
+  /* Ink */
+  --color-ink: #211d16;
+  --color-ink-2: #3d3729;
+  --color-ink-3: #57503f;
+  --color-ink-4: #6e675a;
+  --color-muted: #9a927f;
+
+  /* Rules */
+  --color-line: #e6dfd0;
+  --color-line-soft: #efe9dc;
+  --color-line-input: #ddd5c4;
+  --color-line-strong: #c9bda4;
+
+  /* Brick — the primary */
+  --color-brick: #8a3325;
+  --color-brick-dark: #69241a;
+  --color-brick-tint: #f7ece8;
+  --color-brick-tint-2: #f0ddd6;
+
+  /* Olive — the affirmative */
+  --color-olive: #4d6b3c;
+  --color-olive-dark: #3e5730;
+  --color-olive-tint: #e4ecdb;
+
+  /* Plum & gold — categorical accents */
+  --color-plum: #4f4370;
+  --color-plum-tint: #e8e3f0;
+  --color-gold: #7a5b16;
+  --color-gold-tint: #f4ead2;
+
+  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+  a {
+    color: var(--color-brick);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-brick-dark);
+    text-decoration: underline;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+  }
+  ::selection {
+    background: var(--color-brick-tint-2);
+  }
+  /* The design has square corners everywhere except pills and avatars. */
+  input,
+  textarea,
+  select {
+    border-radius: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brick);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    font-weight: 600;
+  }
+  .balance {
+    text-wrap: balance;
+  }
+  .pretty {
+    text-wrap: pretty;
+  }
+  .animate-fade-up {
+    animation: fadeUp 0.35s ease;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Native controls styled to match the paper palette */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="search"],
+textarea,
+select {
+  border: 1px solid var(--color-line-input);
+  background: var(--color-card);
+  padding: 10px 12px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-brick);
+}
+
+textarea {
+  line-height: 1.55;
+  resize: vertical;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}

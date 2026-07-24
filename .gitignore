@@ -1,0 +1,16 @@
+node_modules
+.next
+out
+build
+.DS_Store
+*.pem
+npm-debug.log*
+.env
+.env*.local
+next-env.d.ts
+
+# Uploaded files live outside public/ so they are never served without an auth check.
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+tsconfig.tsbuildinfo

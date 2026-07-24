@@ -1,0 +1,543 @@
+// Open Research Tunisia — data model
+//
+// PostgreSQL. Status/kind columns are Strings rather than native enums on purpose:
+// they are validated in src/lib/enums.ts, and adding a value there is a code change
+// rather than a migration — which matters for things like resource kinds and CRediT
+// roles that will keep growing.
+//
+// DATABASE_URL  → pooled connection (Supabase: port 6543, ?pgbouncer=true)
+// DIRECT_URL    → direct connection, used only for migrations (Supabase: port 5432)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────── People & access
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  // Null for accounts that only sign in through an OAuth provider.
+  passwordHash String?
+  name         String
+  avatarColor  String  @default("#8a3325")
+  /// External picture URL (from an OAuth provider).
+  avatarUrl    String?
+  /// Uploaded picture, as a storage key ("local:…" / "supabase:…"),
+  /// served through /api/users/[id]/avatar. Wins over avatarUrl.
+  avatarPath   String?
+
+  // public researcher profile — this doubles as a portfolio
+  headline    String? // "Statistics undergraduate"
+  affiliation String? // "Université de Tunis El Manar"
+  city        String?
+  bio         String?
+  skills      String  @default("[]") // json string[]
+  languages   String  @default("[]") // json string[]
+  orcid       String?
+  website     String?
+  scholar     String?
+  github      String?
+
+  // platform role: MEMBER | LEAD | ADMIN
+  role            String    @default("MEMBER")
+  // admins grant this; it is what unlocks "post a project"
+  canPostProjects Boolean   @default(false)
+  emailVerified   Boolean   @default(false)
+  suspended       Boolean   @default(false)
+  cocAcceptedAt   DateTime?
+  createdAt       DateTime  @default(now())
+
+  ledProjects      Project[]         @relation("ProjectLead")
+  memberships      ProjectMember[]
+  applications     Application[]     @relation("Applicant")
+  decidedApps      Application[]     @relation("AppDecider")
+  postingRequests  PostingRequest[]  @relation("Requester")
+  decidedRequests  PostingRequest[]  @relation("RequestDecider")
+  resources        Resource[]
+  meetings         Meeting[]
+  announcements    Announcement[]
+  messages         Message[]
+  tasksAssigned    Task[]            @relation("TaskAssignee")
+  tasksCreated     Task[]            @relation("TaskCreator")
+  contributions    Contribution[]
+  facilitating     Workshop[]        @relation("Facilitator")
+  enrollments      Enrollment[]
+  attendance       Attendance[]
+  submissions      Submission[]      @relation("Submitter")
+  graded           Submission[]      @relation("Grader")
+  certificates     Certificate[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  bookmarks        Bookmark[]
+  sessions         Session[]
+  oauthAccounts    OAuthAccount[]
+  passwordResets   PasswordResetToken[]
+}
+
+/// A social login linked to a user. One user can link both Google and GitHub.
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  provider          String // "google" | "github"
+  providerAccountId String // the provider's stable user id
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// One-time password-reset links. Only the SHA-256 hash of the token is stored,
+/// so a leaked database dump can't be replayed as live reset links.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// A member asks for the right to post projects; an admin approves.
+model PostingRequest {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation("Requester", fields: [userId], references: [id], onDelete: Cascade)
+  proposal    String // the project they'd like to run
+  motivation  String
+  status      String    @default("PENDING") // PENDING | APPROVED | DENIED
+  decisionNote String?
+  decidedById String?
+  decidedBy   User?     @relation("RequestDecider", fields: [decidedById], references: [id])
+  decidedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────── Research projects
+
+model Project {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  summary   String
+  about     String   @default("")
+  area      String // "Environmental data science"
+  // Proposal | Recruiting | Active | Writing | Published | OnHold | Archived
+  stage     String   @default("Proposal")
+  tags      String   @default("[]") // json string[]
+  language  String   @default("English")
+  commitment String  @default("Flexible")
+  // Governance — an open research initiative lives or dies on this
+  ethicsStatus String @default("NOT_REQUIRED") // NOT_REQUIRED | PENDING | APPROVED
+  ethicsNote   String?
+  license      String @default("CC-BY-4.0")
+  dataStatement String?
+
+  leadId    String
+  lead      User     @relation("ProjectLead", fields: [leadId], references: [id])
+  startedAt DateTime @default(now())
+  isPublic  Boolean  @default(true)
+  archived  Boolean  @default(false)
+  /// Non-admin projects are reviewed before they appear publicly.
+  /// PENDING | APPROVED | REJECTED — rejected projects auto-resubmit on edit.
+  approvalStatus String  @default("PENDING")
+  approvalNote   String?
+  createdAt DateTime @default(now())
+
+  linkedWorkshopId String?
+  linkedWorkshop   Workshop? @relation("WorkshopForProject", fields: [linkedWorkshopId], references: [id])
+
+  members       ProjectMember[]
+  openings      Opening[]
+  applications  Application[]
+  resources     Resource[]
+  meetings      Meeting[]
+  announcements Announcement[]
+  messages      Message[]
+  tasks         Task[]
+  contributions Contribution[]
+  outputs       Output[]
+  bookmarks     Bookmark[]
+
+  @@index([stage])
+  @@index([approvalStatus])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // LEAD | MAINTAINER | CONTRIBUTOR | REVIEWER
+  projectRole String @default("CONTRIBUTOR")
+  pod       String? // "Data pod", "Modelling pod"
+  roleTitle String? // free text, shown on the team card
+  /// CRediT taxonomy roles — this is what turns work into authorship
+  creditRoles String @default("[]") // json string[]
+  authorOrder Int?
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model Opening {
+  id         String  @id @default(cuid())
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role       String
+  skills     String
+  commitment String  @default("2–4 hours / week")
+  pod        String?
+  seats      Int     @default(1)
+  isOpen     Boolean @default(true)
+
+  applications Application[]
+}
+
+model Application {
+  id           String    @id @default(cuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation("Applicant", fields: [userId], references: [id], onDelete: Cascade)
+  openingId    String?
+  opening      Opening?  @relation(fields: [openingId], references: [id])
+  roleApplied  String
+  motivation   String
+  skills       String    @default("")
+  availability String    @default("2–4 hours")
+  cvUrl        String?
+  // PENDING | UNDER_REVIEW | ACCEPTED | DECLINED | WITHDRAWN
+  status       String    @default("PENDING")
+  decisionNote String?
+  decidedById  String?
+  decidedBy    User?     @relation("AppDecider", fields: [decidedById], references: [id])
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([projectId, userId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────── Shared knowledge
+
+model Resource {
+  id          String  @id @default(cuid())
+  title       String
+  // PDF | VIDEO | DATA | DOC | LINK | SLIDES | CODE
+  kind        String  @default("LINK")
+  url         String?
+  filePath    String?
+  fileSize    Int?
+  version     String  @default("v1")
+  description String?
+  // PUBLIC | MEMBERS | TEAM
+  visibility  String  @default("MEMBERS")
+
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workshopId  String?
+  workshop    Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  session     WorkshopSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([projectId])
+  @@index([workshopId])
+}
+
+model Meeting {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  heldAt         DateTime
+  attendeesCount Int      @default(0)
+  notes          String
+  decisions      String   @default("")
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id])
+  createdAt      DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Announcement {
+  id         String    @id @default(cuid())
+  body       String
+  isGlobal   Boolean   @default(false)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workshopId String?
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id])
+  createdAt  DateTime  @default(now())
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+/// Without a task board, "you're accepted" leads nowhere.
+model Task {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String    @default("")
+  pod         String?
+  // OPEN | IN_PROGRESS | IN_REVIEW | DONE
+  status      String    @default("OPEN")
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  dueDate     DateTime?
+  effort      String    @default("M") // S | M | L
+  /// low-barrier entry point for newcomers
+  goodFirstTask Boolean @default(false)
+  creditRole  String? // CRediT role earned when done
+  createdById String
+  createdBy   User      @relation("TaskCreator", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([projectId, status])
+}
+
+/// The public record of what someone actually did — the portfolio.
+model Contribution {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workshopId String?
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  text       String
+  // DATA | NOTES | REVIEW | WRITING | CODE | WORKSHOP | ADMIN | ANALYSIS
+  type       String    @default("DATA")
+  creditRole String?
+  taskId     String?
+  occurredAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// What the project produced — the reason the initiative exists.
+model Output {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  // PREPRINT | PAPER | DATASET | CODE | POLICY_BRIEF | POSTER | REPORT
+  type        String    @default("PREPRINT")
+  url         String?
+  doi         String?
+  license     String    @default("CC-BY-4.0")
+  venue       String?
+  authorsLine String    @default("")
+  status      String    @default("DRAFT") // DRAFT | UNDER_REVIEW | PUBLISHED
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────────── Workshops (the LMS half)
+
+model Workshop {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String
+  about       String   @default("")
+  level       String   @default("Beginner") // Beginner | Intermediate | Advanced
+  outcomes    String   @default("[]") // json string[]
+  prerequisites String @default("")
+  facilitatorId String
+  facilitator   User   @relation("Facilitator", fields: [facilitatorId], references: [id])
+  startDate   DateTime
+  seats       Int      @default(30)
+  format      String   @default("ONLINE") // ONLINE | IN_PERSON | HYBRID
+  location    String?
+  language    String   @default("English")
+  certificateEnabled Boolean @default(true)
+  /// % of sessions attended required for a certificate
+  attendanceThreshold Int    @default(75)
+  // DRAFT | OPEN | RUNNING | COMPLETED
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+
+  sessions      WorkshopSession[]
+  enrollments   Enrollment[]
+  resources     Resource[]
+  assignments   Assignment[]
+  certificates  Certificate[]
+  announcements Announcement[]
+  contributions Contribution[]
+  bookmarks     Bookmark[]
+  supportsProjects Project[] @relation("WorkshopForProject")
+}
+
+model WorkshopSession {
+  id          String   @id @default(cuid())
+  workshopId  String
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  index       Int
+  title       String
+  description String   @default("")
+  scheduledAt DateTime
+  durationMin Int      @default(90)
+  meetingUrl  String?
+  recordingUrl String?
+
+  resources   Resource[]
+  attendance  Attendance[]
+  assignments Assignment[]
+
+  @@index([workshopId])
+}
+
+model Enrollment {
+  id          String    @id @default(cuid())
+  workshopId  String
+  workshop    Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ENROLLED | WAITLIST | COMPLETED | DROPPED
+  status      String    @default("ENROLLED")
+  motivation  String    @default("")
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  @@unique([workshopId, userId])
+}
+
+model Attendance {
+  id        String          @id @default(cuid())
+  sessionId String
+  session   WorkshopSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  present   Boolean         @default(true)
+  markedAt  DateTime        @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+model Assignment {
+  id          String           @id @default(cuid())
+  workshopId  String
+  workshop    Workshop         @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  sessionId   String?
+  session     WorkshopSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  title       String
+  description String           @default("")
+  dueDate     DateTime?
+  maxPoints   Int              @default(100)
+  createdAt   DateTime         @default(now())
+
+  submissions Submission[]
+}
+
+model Submission {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation("Submitter", fields: [userId], references: [id], onDelete: Cascade)
+  body         String     @default("")
+  url          String?
+  submittedAt  DateTime   @default(now())
+  grade        Int?
+  feedback     String?
+  gradedById   String?
+  gradedBy     User?      @relation("Grader", fields: [gradedById], references: [id])
+  gradedAt     DateTime?
+
+  @@unique([assignmentId, userId])
+}
+
+/// Publicly verifiable at /verify/<code> — a credential you can put on a CV.
+model Certificate {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshopId String
+  workshop   Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  title      String
+  issuedAt   DateTime @default(now())
+  revoked    Boolean  @default(false)
+
+  @@unique([userId, workshopId])
+}
+
+// ─────────────────────────────────────────────── Cross-cutting
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("INFO")
+  title     String
+  body      String   @default("")
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String   @default("")
+  targetId   String   @default("")
+  meta       String   @default("")
+  createdAt  DateTime @default(now())
+}
+
+model Bookmark {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workshopId String?
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+}
