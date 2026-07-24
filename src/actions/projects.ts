@@ -310,6 +310,7 @@ export async function applyAction(_prev: ActionState, formData: FormData): Promi
     await db.application.create({ data });
   }
 
+  await audit(user.id, "APPLICATION_SUBMIT", "Project", projectId, data.roleApplied);
   await notify(project.leadId, {
     type: "APPLICATION",
     title: `New application to ${project.title}`,
@@ -334,6 +335,7 @@ export async function withdrawApplicationAction(formData: FormData) {
     where: { id: applicationId },
     data: { status: "WITHDRAWN" },
   });
+  await audit(user.id, "APPLICATION_WITHDRAW", "Application", applicationId);
   revalidatePath(`/projects/${app.project.slug}`);
   revalidatePath("/dashboard");
 }
@@ -424,6 +426,8 @@ export async function postMessageAction(formData: FormData) {
   if (!access.canSeeInternal) throw new Error("FORBIDDEN");
 
   await db.message.create({ data: { projectId, authorId: user.id, body } });
+  // The fact of posting is logged; the message content deliberately is not.
+  await audit(user.id, "MESSAGE_POST", "Project", projectId, project.title);
   await notify(await projectAudience(projectId, user.id), {
     type: "MESSAGE",
     title: `New message in ${project.title}`,
@@ -442,6 +446,7 @@ export async function postAnnouncementAction(formData: FormData) {
   const { user, project } = await assertManage(projectId);
 
   await db.announcement.create({ data: { projectId, authorId: user.id, body } });
+  await audit(user.id, "ANNOUNCEMENT_POST", "Project", projectId, project.title);
   await notify(await projectAudience(projectId, user.id), {
     type: "ANNOUNCEMENT",
     title: `Announcement — ${project.title}`,
@@ -484,6 +489,7 @@ export async function addMeetingAction(formData: FormData) {
     },
   });
 
+  await audit(user.id, "MEETING_ADD", "Project", projectId, title);
   await notify(await projectAudience(projectId, user.id), {
     type: "MEETING",
     title: `Meeting notes posted — ${project.title}`,
@@ -556,6 +562,13 @@ export async function addResourceAction(formData: FormData) {
     },
   });
 
+  await audit(
+    user.id,
+    "RESOURCE_ADD",
+    projectId ? "Project" : "Workshop",
+    projectId ?? workshopId ?? "",
+    title,
+  );
   if (projectId) {
     await notify(await projectAudience(projectId, user.id), {
       type: "RESOURCE",
@@ -588,6 +601,7 @@ export async function deleteResourceAction(formData: FormData) {
 
   await deleteObject(res.filePath);
   await db.resource.delete({ where: { id } });
+  await audit(user.id, "RESOURCE_DELETE", "Resource", id, res.title);
   revalidatePath(res.project ? `/projects/${res.project.slug}` : `/workshops/${res.workshop?.slug}`);
 }
 
@@ -595,7 +609,7 @@ export async function deleteResourceAction(formData: FormData) {
 
 export async function addOpeningAction(formData: FormData) {
   const projectId = String(formData.get("projectId"));
-  const { project } = await assertManage(projectId);
+  const { user, project } = await assertManage(projectId);
   const role = String(formData.get("role") || "").trim();
   if (!role) return;
 
@@ -609,6 +623,7 @@ export async function addOpeningAction(formData: FormData) {
       seats: Number(formData.get("seats") || 1) || 1,
     },
   });
+  await audit(user.id, "OPENING_ADD", "Project", projectId, role);
   revalidatePath(`/projects/${project.slug}`);
 }
 
@@ -619,12 +634,19 @@ export async function toggleOpeningAction(formData: FormData) {
     include: { project: { select: { id: true, slug: true } } },
   });
   if (!opening) return;
-  await assertManage(opening.project.id);
+  const { user } = await assertManage(opening.project.id);
 
   await db.opening.update({
     where: { id: openingId },
     data: { isOpen: !opening.isOpen },
   });
+  await audit(
+    user.id,
+    opening.isOpen ? "OPENING_CLOSE" : "OPENING_REOPEN",
+    "Opening",
+    openingId,
+    opening.role,
+  );
   revalidatePath(`/projects/${opening.project.slug}`);
 }
 
@@ -667,6 +689,7 @@ export async function createTaskAction(formData: FormData) {
       createdById: user.id,
     },
   });
+  await audit(user.id, "TASK_CREATE", "Project", projectId, title);
   revalidatePath(`/projects/${project.slug}`);
 }
 
@@ -687,6 +710,7 @@ export async function deleteTaskAction(formData: FormData) {
   if (!allowed) throw new Error("FORBIDDEN");
 
   await db.task.delete({ where: { id: taskId } });
+  await audit(user.id, "TASK_DELETE", "Project", task.project.id, task.title);
   revalidatePath(`/projects/${task.project.slug}`);
 }
 
@@ -716,6 +740,7 @@ export async function updateTaskStatusAction(formData: FormData) {
     where: { id: taskId },
     data: { status, completedAt: status === "DONE" ? new Date() : null },
   });
+  await audit(user.id, "TASK_STATUS", "Task", taskId, `${task.title} → ${status}`);
 
   // Completing a task writes to the contribution ledger — this is how credit accrues.
   if (status === "DONE" && task.status !== "DONE" && task.assigneeId) {
@@ -771,13 +796,15 @@ export async function claimTaskAction(formData: FormData) {
   }
   if (task.status === "DONE") throw new Error("This task is already done.");
 
+  const releasing = task.assigneeId === user.id;
   await db.task.update({
     where: { id: taskId },
     data: {
-      assigneeId: task.assigneeId === user.id ? null : user.id,
-      status: task.assigneeId === user.id ? "OPEN" : "IN_PROGRESS",
+      assigneeId: releasing ? null : user.id,
+      status: releasing ? "OPEN" : "IN_PROGRESS",
     },
   });
+  await audit(user.id, releasing ? "TASK_RELEASE" : "TASK_CLAIM", "Task", taskId, task.title);
   revalidatePath(`/projects/${task.project.slug}`);
 }
 
@@ -790,7 +817,7 @@ export async function updateMemberAction(formData: FormData) {
     include: { project: { select: { id: true, slug: true, leadId: true } } },
   });
   if (!member) return;
-  await assertManage(member.project.id);
+  const { user } = await assertManage(member.project.id);
 
   const projectRoleRaw = String(formData.get("projectRole") || member.projectRole);
   if (!oneOf(PROJECT_ROLES, projectRoleRaw)) throw new Error("Invalid project role.");
@@ -816,6 +843,7 @@ export async function updateMemberAction(formData: FormData) {
       authorOrder: authorOrderRaw && authorOrder >= 1 ? authorOrder : null,
     },
   });
+  await audit(user.id, "MEMBER_UPDATE", "ProjectMember", memberId, projectRole);
   revalidatePath(`/projects/${member.project.slug}`);
 }
 
@@ -826,10 +854,11 @@ export async function removeMemberAction(formData: FormData) {
     include: { project: { select: { id: true, slug: true, leadId: true } } },
   });
   if (!member) return;
-  await assertManage(member.project.id);
+  const { user } = await assertManage(member.project.id);
   if (member.userId === member.project.leadId) throw new Error("Cannot remove the project lead.");
 
   await db.projectMember.delete({ where: { id: memberId } });
+  await audit(user.id, "MEMBER_REMOVE", "Project", member.project.id, member.userId);
   revalidatePath(`/projects/${member.project.slug}`);
 }
 
@@ -872,6 +901,7 @@ export async function addOutputAction(formData: FormData) {
     },
   });
 
+  await audit(user.id, "OUTPUT_ADD", "Project", projectId, title);
   await notify(await projectAudience(projectId, user.id), {
     type: "OUTPUT",
     title: `New output on ${project.title}`,
@@ -911,6 +941,7 @@ export async function logContributionAction(formData: FormData) {
     },
   });
 
+  await audit(user.id, "CONTRIBUTION_LOG", "User", userId, text.slice(0, 80));
   await notify(userId, {
     type: "CONTRIBUTION",
     title: "A contribution was logged for you",
@@ -937,6 +968,12 @@ export async function toggleBookmarkAction(formData: FormData) {
   } else {
     await db.bookmark.create({ data: { userId: user.id, projectId, workshopId } });
   }
+  await audit(
+    user.id,
+    existing ? "BOOKMARK_REMOVE" : "BOOKMARK_ADD",
+    projectId ? "Project" : "Workshop",
+    projectId ?? workshopId ?? "",
+  );
   revalidatePath(path);
   revalidatePath("/dashboard");
 }

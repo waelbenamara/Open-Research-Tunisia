@@ -6,7 +6,14 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { createSession, destroySession, hashPassword, verifyPassword, requireUser } from "@/lib/auth";
+import {
+  createSession,
+  destroySession,
+  getCurrentUser,
+  hashPassword,
+  verifyPassword,
+  requireUser,
+} from "@/lib/auth";
 import { avatarColor } from "@/lib/format";
 import { audit } from "@/lib/notify";
 import { deleteObject, storeUpload } from "@/lib/storage";
@@ -142,6 +149,8 @@ export async function forgotPasswordAction(
   });
   if (recent) return generic;
 
+  await audit(user.id, "PASSWORD_RESET_REQUEST", "User", user.id);
+
   const token = randomBytes(32).toString("base64url");
   await db.passwordResetToken.deleteMany({ where: { userId: user.id } });
   await db.passwordResetToken.create({
@@ -222,7 +231,9 @@ export async function resetPasswordAction(
 }
 
 export async function logoutAction() {
+  const user = await getCurrentUser();
   await destroySession();
+  if (user) await audit(user.id, "LOGOUT", "User", user.id);
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -304,6 +315,7 @@ export async function updateProfileAction(
     },
   });
 
+  await audit(user.id, "PROFILE_UPDATE", "User", user.id, avatarChange ? "including picture" : "");
   revalidatePath("/profile");
   revalidatePath("/profile/edit");
   return { success: "Profile saved." };
@@ -316,6 +328,7 @@ export async function acceptCodeOfConductAction() {
     where: { id: user.id },
     data: { cocAcceptedAt: new Date() },
   });
+  await audit(user.id, "COC_ACCEPT", "User", user.id);
   revalidatePath("/", "layout");
   redirect("/onboarding");
 }
@@ -341,6 +354,7 @@ export async function requestPostingRightsAction(
   await db.postingRequest.create({
     data: { userId: user.id, proposal, motivation },
   });
+  await audit(user.id, "POSTING_REQUEST", "User", user.id, proposal.slice(0, 60));
 
   const admins = await db.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
   await db.notification.createMany({

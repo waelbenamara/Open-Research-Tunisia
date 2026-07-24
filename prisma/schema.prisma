@@ -529,6 +529,8 @@ model AuditLog {
   targetId   String   @default("")
   meta       String   @default("")
   createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
 }
 
 model Bookmark {

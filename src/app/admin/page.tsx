@@ -523,7 +523,7 @@ async function AdminAudit() {
 
   return (
     <div>
-      <SectionLabel>Every privileged action, in order</SectionLabel>
+      <SectionLabel>Every action on the platform, in order</SectionLabel>
       {logs.length === 0 ? (
         <EmptyState title="Nothing logged yet." />
       ) : (

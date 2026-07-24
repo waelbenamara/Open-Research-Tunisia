@@ -174,6 +174,7 @@ export async function enrollAction(formData: FormData) {
   // Full workshops don't reject people — they waitlist them.
   const full = workshop.enrollments.length >= workshop.seats;
   const status = full ? "WAITLIST" : "ENROLLED";
+  const acted = !existing || existing.status === "DROPPED";
 
   if (existing) {
     if (existing.status === "DROPPED") {
@@ -188,6 +189,10 @@ export async function enrollAction(formData: FormData) {
         motivation: String(formData.get("motivation") || "").trim(),
       },
     });
+  }
+
+  if (acted) {
+    await audit(user.id, full ? "ENROLL_WAITLIST" : "ENROLL", "Workshop", workshopId, workshop.title);
   }
 
   await notify(user.id, {
@@ -214,6 +219,7 @@ export async function dropEnrollmentAction(formData: FormData) {
   if (!enrollment) return;
 
   await db.enrollment.update({ where: { id: enrollment.id }, data: { status: "DROPPED" } });
+  await audit(user.id, "ENROLLMENT_DROP", "Workshop", workshopId, enrollment.workshop.slug);
 
   // Promote the first person off the waitlist.
   const active = await db.enrollment.count({
@@ -244,7 +250,7 @@ export async function dropEnrollmentAction(formData: FormData) {
 
 export async function addSessionAction(formData: FormData) {
   const workshopId = String(formData.get("workshopId"));
-  const { workshop } = await assertFacilitator(workshopId);
+  const { user, workshop } = await assertFacilitator(workshopId);
 
   const count = await db.workshopSession.count({ where: { workshopId } });
   const scheduledAt = String(formData.get("scheduledAt") || "");
@@ -262,6 +268,7 @@ export async function addSessionAction(formData: FormData) {
       meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
     },
   });
+  await audit(user.id, "SESSION_ADD", "Workshop", workshopId, title);
   revalidatePath(`/workshops/${workshop.slug}`);
 }
 
@@ -272,7 +279,7 @@ export async function updateSessionAction(formData: FormData) {
     include: { workshop: { select: { id: true, slug: true } } },
   });
   if (!session) return;
-  await assertFacilitator(session.workshop.id);
+  const { user } = await assertFacilitator(session.workshop.id);
 
   await db.workshopSession.update({
     where: { id: sessionId },
@@ -281,6 +288,7 @@ export async function updateSessionAction(formData: FormData) {
       meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
     },
   });
+  await audit(user.id, "SESSION_UPDATE", "WorkshopSession", sessionId, session.title);
   revalidatePath(`/workshops/${session.workshop.slug}`);
 }
 
@@ -291,7 +299,7 @@ export async function markAttendanceAction(formData: FormData) {
     include: { workshop: { select: { id: true, slug: true } } },
   });
   if (!session) return;
-  await assertFacilitator(session.workshop.id);
+  const { user } = await assertFacilitator(session.workshop.id);
 
   const presentIds = new Set(formData.getAll("present").map(String));
   const enrollments = await db.enrollment.findMany({
@@ -307,6 +315,7 @@ export async function markAttendanceAction(formData: FormData) {
     });
   }
 
+  await audit(user.id, "ATTENDANCE_MARK", "WorkshopSession", sessionId, `${presentIds.size} present`);
   revalidatePath(`/workshops/${session.workshop.slug}`);
 }
 
@@ -314,7 +323,7 @@ export async function markAttendanceAction(formData: FormData) {
 
 export async function addAssignmentAction(formData: FormData) {
   const workshopId = String(formData.get("workshopId"));
-  const { workshop } = await assertFacilitator(workshopId);
+  const { user, workshop } = await assertFacilitator(workshopId);
 
   const title = String(formData.get("title") || "").trim();
   if (!title) return;
@@ -331,6 +340,7 @@ export async function addAssignmentAction(formData: FormData) {
     },
   });
 
+  await audit(user.id, "ASSIGNMENT_ADD", "Workshop", workshopId, title);
   const enrolled = await db.enrollment.findMany({
     where: { workshopId, status: "ENROLLED" },
     select: { userId: true },
@@ -372,6 +382,7 @@ export async function submitAssignmentAction(formData: FormData) {
     update: { body, url, submittedAt: new Date(), grade: null, feedback: null, gradedAt: null },
   });
 
+  await audit(user.id, "SUBMISSION_ADD", "Assignment", assignmentId, assignment.title);
   await notify(assignment.workshop.facilitatorId, {
     type: "SUBMISSION",
     title: `New submission — ${assignment.title}`,
@@ -405,6 +416,7 @@ export async function gradeSubmissionAction(formData: FormData) {
     },
   });
 
+  await audit(user.id, "SUBMISSION_GRADE", "Submission", submissionId, gradeRaw || "ungraded");
   await notify(submission.userId, {
     type: "GRADE",
     title: `Feedback on ${submission.assignment.title}`,
