@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getProjectAccess, canCreateProject } from "@/lib/permissions";
@@ -49,6 +52,15 @@ async function notifyAdmins(n: { type: string; title: string; body?: string; lin
     select: { id: true },
   });
   await notify(admins.map((a) => a.id), n);
+}
+
+/** Lead + maintainers — the people who review and confirm work. */
+async function projectManagers(projectId: string, leadId: string, exclude?: string) {
+  const maintainers = await db.projectMember.findMany({
+    where: { projectId, projectRole: "MAINTAINER" },
+    select: { userId: true },
+  });
+  return [leadId, ...maintainers.map((m) => m.userId)].filter((id) => id !== exclude);
 }
 
 async function assertManage(projectId: string) {
@@ -352,7 +364,7 @@ export async function decideApplicationAction(formData: FormData) {
     where: { id: applicationId },
     include: {
       project: { select: { id: true, slug: true, title: true, leadId: true } },
-      user: { select: { id: true, name: true } },
+      user: { select: { id: true, name: true, email: true } },
       opening: { select: { role: true, pod: true } },
     },
   });
@@ -405,6 +417,46 @@ export async function decideApplicationAction(formData: FormData) {
       title: `Update on your application to ${app.project.title}`,
       body: note || "The lead has decided not to move forward this time. Other projects are recruiting.",
       link: `/projects/${app.project.slug}`,
+    });
+  }
+
+  // A decision someone never sees is the platform's worst failure mode —
+  // so accepted/declined also goes out by email, not only in-app.
+  if (decision === "ACCEPTED" || decision === "DECLINED") {
+    const h = await headers();
+    const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+    const accepted = decision === "ACCEPTED";
+    const template: EmailTemplate = {
+      preheader: accepted
+        ? `You're on the team of ${app.project.title}.`
+        : `An update on your application to ${app.project.title}.`,
+      heading: accepted ? "You're on the team." : "About your application",
+      greeting: `Hi ${app.user.name.split(" ")[0]},`,
+      paragraphs: accepted
+        ? [
+            `Your application to “${app.project.title}” was accepted — welcome aboard.`,
+            note
+              ? `A note from the lead: “${note}”`
+              : "Head to the project page: read the announcements and recent discussion, then pick up a task from the board.",
+          ]
+        : [
+            `The lead of “${app.project.title}” decided not to move forward with your application this time.`,
+            note
+              ? `Their note: “${note}”`
+              : "This is usually about timing and fit rather than ability — other projects are recruiting, and workshops can close specific skill gaps.",
+          ],
+      cta: accepted
+        ? { label: "Open the project", url: `${origin}/projects/${app.project.slug}` }
+        : { label: "See what's recruiting", url: `${origin}/?filter=recruiting` },
+      footerNote: `Sent to ${app.user.email} about your application on Open Research Tunisia.`,
+    };
+    await sendEmail({
+      to: app.user.email,
+      subject: accepted
+        ? `You're on the team: ${app.project.title}`
+        : `Update on your application to ${app.project.title}`,
+      text: renderEmailText(template),
+      html: renderEmailHtml(template),
     });
   }
 
@@ -751,6 +803,12 @@ export async function createTaskAction(formData: FormData) {
   const creditRoleRaw = String(formData.get("creditRole") || "").trim();
   const assigneeRaw = String(formData.get("assigneeId") || "");
 
+  const assigneeId = isManager
+    ? assigneeRaw || null
+    : formData.get("assignSelf") === "on"
+      ? user.id
+      : null;
+
   await db.task.create({
     data: {
       projectId,
@@ -760,15 +818,22 @@ export async function createTaskAction(formData: FormData) {
       effort: oneOf(TASK_EFFORTS, effortRaw) ? effortRaw : "M",
       creditRole: isManager && oneOf(CREDIT_ROLES, creditRoleRaw) ? creditRoleRaw : null,
       goodFirstTask: isManager && formData.get("goodFirstTask") === "on",
-      assigneeId: isManager
-        ? assigneeRaw || null
-        : formData.get("assignSelf") === "on"
-          ? user.id
-          : null,
+      assigneeId,
       dueDate: dueRaw ? new Date(dueRaw) : null,
       createdById: user.id,
     },
   });
+
+  // Being handed work is exactly the kind of thing you must not miss.
+  if (assigneeId && assigneeId !== user.id) {
+    await notify(assigneeId, {
+      type: "TASK_ASSIGNED",
+      title: `Task assigned to you: ${title}`,
+      body: `${user.name} assigned you a task on ${project.title}${dueRaw ? ` — due ${dueRaw}` : ""}.`,
+      link: `/projects/${project.slug}?tab=tasks`,
+    });
+  }
+
   await audit(user.id, "TASK_CREATE", "Project", projectId, title);
   revalidatePath(`/projects/${project.slug}`);
 }
@@ -821,6 +886,41 @@ export async function updateTaskStatusAction(formData: FormData) {
     data: { status, completedAt: status === "DONE" ? new Date() : null },
   });
   await audit(user.id, "TASK_STATUS", "Task", taskId, `${task.title} → ${status}`);
+
+  const taskLink = `/projects/${task.project.slug}?tab=tasks`;
+  if (status === "IN_REVIEW" && !access.canManage) {
+    // Work handed over — the reviewers should hear about it.
+    await notify(await projectManagers(task.project.id, task.project.leadId, user.id), {
+      type: "TASK_REVIEW",
+      title: `Ready for review: ${task.title}`,
+      body: `${user.name} submitted this task on ${task.project.title} for review.`,
+      link: taskLink,
+    });
+  }
+  if (status === "DONE" && task.assigneeId && task.assigneeId !== user.id) {
+    await notify(task.assigneeId, {
+      type: "TASK_DONE",
+      title: `Confirmed done: ${task.title}`,
+      body: task.creditRole
+        ? `Your work was confirmed — “${task.creditRole}” has been added to your credit record.`
+        : "Your work was confirmed complete.",
+      link: taskLink,
+    });
+  }
+  if (
+    status === "IN_PROGRESS" &&
+    task.status === "IN_REVIEW" &&
+    access.canManage &&
+    task.assigneeId &&
+    task.assigneeId !== user.id
+  ) {
+    await notify(task.assigneeId, {
+      type: "TASK_RETURNED",
+      title: `Needs another pass: ${task.title}`,
+      body: `${user.name} sent this task back — check the discussion for what's missing.`,
+      link: taskLink,
+    });
+  }
 
   // Completing a task writes to the contribution ledger — this is how credit accrues.
   if (status === "DONE" && task.status !== "DONE" && task.assigneeId) {
@@ -885,6 +985,18 @@ export async function claimTaskAction(formData: FormData) {
     },
   });
   await audit(user.id, releasing ? "TASK_RELEASE" : "TASK_CLAIM", "Task", taskId, task.title);
+
+  // Let the task's author know someone picked it up (or put it back).
+  if (task.createdById !== user.id) {
+    await notify(task.createdById, {
+      type: releasing ? "TASK_RELEASED" : "TASK_CLAIMED",
+      title: releasing ? `Task released: ${task.title}` : `Task claimed: ${task.title}`,
+      body: releasing
+        ? `${user.name} released this task back to the board.`
+        : `${user.name} picked up this task.`,
+      link: `/projects/${task.project.slug}?tab=tasks`,
+    });
+  }
   revalidatePath(`/projects/${task.project.slug}`);
 }
 
@@ -924,6 +1036,15 @@ export async function updateMemberAction(formData: FormData) {
     },
   });
   await audit(user.id, "MEMBER_UPDATE", "ProjectMember", memberId, projectRole);
+
+  if (member.userId !== user.id) {
+    await notify(member.userId, {
+      type: "MEMBER_UPDATED",
+      title: "Your role & credit were updated",
+      body: `${user.name} updated your role or CRediT record on a project. Check the Team & credit tab.`,
+      link: `/projects/${member.project.slug}?tab=team`,
+    });
+  }
   revalidatePath(`/projects/${member.project.slug}`);
 }
 
@@ -939,6 +1060,13 @@ export async function removeMemberAction(formData: FormData) {
 
   await db.projectMember.delete({ where: { id: memberId } });
   await audit(user.id, "MEMBER_REMOVE", "Project", member.project.id, member.userId);
+
+  await notify(member.userId, {
+    type: "MEMBER_REMOVED",
+    title: "You were removed from a project's team",
+    body: "Your logged contributions remain on your record. If this is unexpected, contact the project lead.",
+    link: `/projects/${member.project.slug}`,
+  });
   revalidatePath(`/projects/${member.project.slug}`);
 }
 

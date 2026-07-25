@@ -269,6 +269,20 @@ export async function addSessionAction(formData: FormData) {
     },
   });
   await audit(user.id, "SESSION_ADD", "Workshop", workshopId, title);
+
+  const enrolled = await db.enrollment.findMany({
+    where: { workshopId, status: "ENROLLED" },
+    select: { userId: true },
+  });
+  await notify(
+    enrolled.map((e) => e.userId),
+    {
+      type: "SESSION",
+      title: `New session scheduled — ${workshop.title}`,
+      body: `${title}${scheduledAt ? ` · ${new Date(scheduledAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}` : ""}`,
+      link: `/workshops/${workshop.slug}`,
+    },
+  );
   revalidatePath(`/workshops/${workshop.slug}`);
 }
 
@@ -279,16 +293,34 @@ export async function updateSessionAction(formData: FormData) {
     include: { workshop: { select: { id: true, slug: true } } },
   });
   if (!session) return;
-  const { user } = await assertFacilitator(session.workshop.id);
+  const { user, workshop } = await assertFacilitator(session.workshop.id);
 
+  const recordingUrl = String(formData.get("recordingUrl") || "").trim() || null;
   await db.workshopSession.update({
     where: { id: sessionId },
     data: {
-      recordingUrl: String(formData.get("recordingUrl") || "").trim() || null,
+      recordingUrl,
       meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
     },
   });
   await audit(user.id, "SESSION_UPDATE", "WorkshopSession", sessionId, session.title);
+
+  // A newly posted recording is the thing people who missed the session wait for.
+  if (recordingUrl && !session.recordingUrl) {
+    const enrolled = await db.enrollment.findMany({
+      where: { workshopId: workshop.id, status: { in: ["ENROLLED", "COMPLETED"] } },
+      select: { userId: true },
+    });
+    await notify(
+      enrolled.map((e) => e.userId),
+      {
+        type: "RECORDING",
+        title: `Recording available — ${workshop.title}`,
+        body: session.title,
+        link: `/workshops/${session.workshop.slug}`,
+      },
+    );
+  }
   revalidatePath(`/workshops/${session.workshop.slug}`);
 }
 
