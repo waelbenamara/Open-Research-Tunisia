@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.env
+.env.*
+storage/uploads/*
+!storage/uploads/.gitkeep
+tsconfig.tsbuildinfo
+Advanced DNS.pdf
