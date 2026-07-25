@@ -41,21 +41,37 @@ export async function GET(
   const resolved = await resolveDownload(resource.filePath);
   if (!resolved) return new NextResponse("Not found", { status: 404 });
 
-  if (resolved.kind === "redirect") {
+  const ext = fileExt(resource.filePath);
+  const isHtml = ext === "html";
+
+  if (resolved.kind === "redirect" && !isHtml) {
     // Supabase signed URLs serve with the stored content type — inline by default.
     return NextResponse.redirect(resolved.url);
   }
 
-  const ext = fileExt(resolved.filename);
+  // HTML (Manim Slides etc.) is always served by US, never redirected, so the
+  // sandbox CSP below is guaranteed: scripts may run, but in an opaque origin
+  // with no cookies, storage, or same-origin requests. Without this header an
+  // uploaded page could act as the signed-in viewer.
+  let body: Buffer;
+  if (resolved.kind === "buffer") {
+    body = resolved.body;
+  } else {
+    const res = await fetch(resolved.url);
+    if (!res.ok) return new NextResponse("Not found", { status: 404 });
+    body = Buffer.from(await res.arrayBuffer());
+  }
+
   const inline = viewableKind(ext) !== null;
   const safeTitle = resource.title.replace(/[^\w\s.-]/g, "").trim() || "file";
 
-  return new NextResponse(new Uint8Array(resolved.body), {
+  return new NextResponse(new Uint8Array(body), {
     headers: {
       "Content-Type": MIME_BY_EXT[ext] ?? "application/octet-stream",
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeTitle}.${ext}"`,
-      "Content-Length": String(resolved.body.length),
+      "Content-Length": String(body.length),
       "Cache-Control": "private, no-store",
+      ...(isHtml ? { "Content-Security-Policy": "sandbox allow-scripts" } : {}),
     },
   });
 }

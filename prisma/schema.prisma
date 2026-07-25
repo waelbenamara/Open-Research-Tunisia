@@ -253,6 +253,9 @@ model Resource {
   fileSize    Int?
   version     String  @default("v1")
   description String?
+  /// Path-style folder like "Data/Raw" — empty string = project root.
+  /// Plain text on purpose: no folder table, no recursion, renames are updates.
+  folder      String  @default("")
   // PUBLIC | MEMBERS | TEAM
   visibility  String  @default("MEMBERS")
 

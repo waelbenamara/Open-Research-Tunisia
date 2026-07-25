@@ -34,6 +34,9 @@ const ALLOWED = new Set([
   "png", "jpg", "jpeg", "gif", "webp", "svg",
   "mp4", "webm", "mov", "mp3", "wav",
   "zip", "ipynb", "py", "r", "geojson",
+  // Self-contained HTML presentations (e.g. Manim Slides exports). These are
+  // ONLY ever served with a sandbox CSP — never as same-origin documents.
+  "html",
 ]);
 
 export type StoredFile = { filePath: string; fileSize: number; ext: string };
@@ -62,6 +65,7 @@ export const MIME_BY_EXT: Record<string, string> = {
   mp3: "audio/mpeg",
   wav: "audio/wav",
   zip: "application/zip",
+  html: "text/html; charset=utf-8",
 };
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -174,6 +178,7 @@ export async function deleteObject(key: string | null) {
 
 /** Best-guess resource kind from a file extension, so the badge is right by default. */
 export function kindFromExt(ext: string): string {
+  if (ext === "html") return "SLIDES";
   if (ext === "pdf") return "PDF";
   if (["mp4", "webm", "mov", "mp3", "wav"].includes(ext)) return "VIDEO";
   if (["csv", "tsv", "json", "jsonl", "xlsx", "xls", "parquet", "geojson"].includes(ext))

@@ -112,7 +112,25 @@ export default async function ResourceViewerPage({
         </a>
       </div>
 
-      {kind === "pdf" ? (
+      {kind === "presentation" ? (
+        <div>
+          {/* Sandboxed on both ends: the iframe attribute here, and the CSP
+              header the inline route always sends for HTML. */}
+          <iframe
+            src={inlineSrc}
+            title={resource.title}
+            sandbox="allow-scripts"
+            allowFullScreen
+            className="aspect-video w-full border border-line bg-ink"
+          />
+          <div className="mt-2 flex items-center gap-4 text-[12.5px] text-muted">
+            <span>Use ← → to move between slides.</span>
+            <a href={inlineSrc} target="_blank" rel="noopener noreferrer" className="font-semibold">
+              Present full screen ↗
+            </a>
+          </div>
+        </div>
+      ) : kind === "pdf" ? (
         <iframe
           src={inlineSrc}
           title={resource.title}

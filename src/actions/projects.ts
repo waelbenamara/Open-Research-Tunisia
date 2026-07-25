@@ -552,6 +552,15 @@ export async function addResourceAction(formData: FormData) {
   if (kind === "AUTO") kind = stored ? kindFromExt(stored.ext) : "LINK";
   if (!oneOf(RESOURCE_KINDS, kind)) kind = "LINK";
 
+  // Path-style folder — segments trimmed, at most 4 levels deep.
+  const folder = String(formData.get("folder") || "")
+    .split("/")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .join("/")
+    .slice(0, 120);
+
   const visibilityRaw = String(formData.get("visibility") || "MEMBERS");
 
   await db.resource.create({
@@ -563,6 +572,7 @@ export async function addResourceAction(formData: FormData) {
       fileSize: stored?.fileSize ?? null,
       version: String(formData.get("version") || "v1"),
       description: String(formData.get("description") || "").trim() || null,
+      folder,
       visibility: oneOf(VISIBILITIES, visibilityRaw) ? visibilityRaw : "MEMBERS",
       projectId,
       workshopId,

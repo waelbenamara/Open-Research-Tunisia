@@ -6,11 +6,13 @@ export function fileExt(pathOrName: string | null | undefined): string {
 /**
  * How a stored file can be shown in the browser, if at all.
  * SVG is deliberately excluded — inline SVG from user uploads can run scripts
- * in our origin, so it stays download-only.
+ * in our origin, so it stays download-only. HTML is viewable but ONLY inside
+ * a sandbox (opaque origin, no cookies) — the inline route enforces that.
  */
 export function viewableKind(
   ext: string,
-): "pdf" | "image" | "video" | "audio" | "text" | null {
+): "pdf" | "image" | "video" | "audio" | "text" | "presentation" | null {
+  if (ext === "html") return "presentation";
   if (ext === "pdf") return "pdf";
   if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
   if (["mp4", "webm", "mov"].includes(ext)) return "video";
