@@ -132,8 +132,8 @@ export async function MeetingsTab({
                   <input type="hidden" name="projectId" value={projectId} />
                   <input type="hidden" name="meetingId" value={m.id} />
                   <input type="hidden" name="kind" value="AUTO" />
-                  <Field label="Title" className="min-w-[200px] flex-1">
-                    <input name="title" required placeholder="Slides, agenda, recording…" />
+                  <Field label="Title" hint="optional" className="min-w-[200px] flex-1">
+                    <input name="title" placeholder="Defaults to the file's name" />
                   </Field>
                   <Field label="File" className="min-w-[220px] flex-1">
                     <input type="file" name="file" required />

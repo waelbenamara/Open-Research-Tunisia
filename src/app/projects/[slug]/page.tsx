@@ -195,7 +195,12 @@ export default async function ProjectPage({
             <OverviewTab project={project} stageIdx={stageIdx} access={access} tags={tags} />
           ) : null}
           {tab === "resources" ? (
-            <ResourcesTab projectId={project.id} access={access} signedIn={!!user} />
+            <ResourcesTab
+              projectId={project.id}
+              access={access}
+              signedIn={!!user}
+              userId={user?.id ?? null}
+            />
           ) : null}
           {tab === "tasks" && access.canSeeInternal ? (
             <TasksTab projectId={project.id} access={access} members={project.members} userId={user?.id ?? null} />

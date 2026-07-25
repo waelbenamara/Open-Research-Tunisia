@@ -19,6 +19,7 @@ import {
   Shell,
 } from "@/components/ui";
 import { Details } from "@/components/Collapse";
+import { ResourceEditForm } from "@/components/ResourceEditForm";
 import { EnrollPanel } from "./EnrollPanel";
 import { AssignmentsTab } from "./tabs/AssignmentsTab";
 import { RosterTab } from "./tabs/RosterTab";
@@ -305,8 +306,8 @@ export default async function WorkshopPage({
                     <form action={addResourceAction} className="flex flex-col gap-3.5">
                       <input type="hidden" name="workshopId" value={workshop.id} />
                       <div className="grid gap-3.5 sm:grid-cols-[1fr_140px]">
-                        <Field label="Title">
-                          <input name="title" required placeholder="Session 1 slides" />
+                        <Field label="Title" hint="optional — defaults to the file's name">
+                          <input name="title" placeholder="Session 1 slides" />
                         </Field>
                         <Field label="Kind">
                           <select name="kind" defaultValue="AUTO">
@@ -354,7 +355,8 @@ export default async function WorkshopPage({
                     workshop.resources.map((r) => {
                       const [bg, fg] = KIND_COLORS[r.kind] ?? KIND_COLORS.LINK;
                       const locked = !isEnrolled && !canManage && r.visibility !== "PUBLIC";
-                      return (
+                      const editable = canManage || (!!user && r.uploadedById === user.id);
+                      const card = (
                         <Card key={r.id} className="flex items-center gap-4 px-5 py-3.5">
                           <KindBadge kind={r.kind} bg={bg} fg={fg} />
                           <div className="flex-1 text-[14.5px] font-semibold">{r.title}</div>
@@ -385,6 +387,17 @@ export default async function WorkshopPage({
                             </a>
                           ) : null}
                         </Card>
+                      );
+                      if (!editable) return card;
+                      return (
+                        <div key={r.id} className="flex flex-col">
+                          {card}
+                          <div className="border border-t-0 border-line-soft bg-sand/40 px-5 py-1.5">
+                            <Details label="Edit details">
+                              <ResourceEditForm resource={r} folders={null} />
+                            </Details>
+                          </div>
+                        </div>
                       );
                     })
                   )}

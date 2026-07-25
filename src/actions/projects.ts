@@ -538,15 +538,27 @@ export async function addResourceAction(formData: FormData) {
     if (!meeting || meeting.projectId !== projectId) throw new Error("FORBIDDEN");
   }
 
-  const title = String(formData.get("title") || "").trim();
-  if (!title) return;
-
   const url = String(formData.get("url") || "").trim();
   const upload = formData.get("file");
   const stored = upload instanceof File ? await storeUpload(upload) : null;
 
   // A resource needs somewhere to point: an uploaded file or a link.
   if (!stored && !url) return;
+
+  // No title? Use the file's own name (or the link's last segment).
+  let title = String(formData.get("title") || "").trim();
+  if (!title && upload instanceof File && upload.size > 0) {
+    title = upload.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+  }
+  if (!title && url) {
+    try {
+      const u = new URL(url);
+      title = decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() ?? u.hostname);
+    } catch {
+      title = url.slice(0, 80);
+    }
+  }
+  if (!title) return;
 
   let kind = String(formData.get("kind") || "LINK");
   if (kind === "AUTO") kind = stored ? kindFromExt(stored.ext) : "LINK";
@@ -623,6 +635,54 @@ export async function deleteResourceAction(formData: FormData) {
   await db.resource.delete({ where: { id } });
   await audit(user.id, "RESOURCE_DELETE", "Resource", id, res.title);
   revalidatePath(res.project ? `/projects/${res.project.slug}` : `/workshops/${res.workshop?.slug}`);
+}
+
+/** Edit a resource's metadata (not its file). Same permission as deletion:
+ *  the uploader, the project lead / workshop facilitator, or an admin. */
+export async function updateResourceAction(formData: FormData) {
+  const id = String(formData.get("resourceId"));
+  const user = await requireUser();
+  const res = await db.resource.findUnique({
+    where: { id },
+    include: {
+      project: { select: { slug: true, leadId: true } },
+      workshop: { select: { slug: true, facilitatorId: true } },
+    },
+  });
+  if (!res) return;
+
+  const allowed =
+    user.role === "ADMIN" ||
+    res.uploadedById === user.id ||
+    res.project?.leadId === user.id ||
+    res.workshop?.facilitatorId === user.id;
+  if (!allowed) throw new Error("FORBIDDEN");
+
+  const kindRaw = String(formData.get("kind") || res.kind);
+  const visibilityRaw = String(formData.get("visibility") || res.visibility);
+  const folder = String(formData.get("folder") ?? res.folder)
+    .split("/")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .join("/")
+    .slice(0, 120);
+
+  await db.resource.update({
+    where: { id },
+    data: {
+      title: String(formData.get("title") || "").trim() || res.title,
+      description: String(formData.get("description") || "").trim() || null,
+      version: String(formData.get("version") || res.version).trim() || res.version,
+      kind: oneOf(RESOURCE_KINDS, kindRaw) ? kindRaw : res.kind,
+      visibility: oneOf(VISIBILITIES, visibilityRaw) ? visibilityRaw : res.visibility,
+      folder,
+    },
+  });
+
+  await audit(user.id, "RESOURCE_UPDATE", "Resource", id, res.title);
+  revalidatePath(res.project ? `/projects/${res.project.slug}` : `/workshops/${res.workshop?.slug}`);
+  revalidatePath(`/resources/${id}`);
 }
 
 /* ── Openings ───────────────────────────────────────────── */

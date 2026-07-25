@@ -5,6 +5,8 @@ import { fileExt, fileSize, shortDate, viewableKind } from "@/lib/format";
 import { addResourceAction, deleteResourceAction } from "@/actions/projects";
 import { Card, EmptyState, Field, KindBadge } from "@/components/ui";
 import { Details } from "@/components/Collapse";
+import { FolderPicker } from "@/components/FolderPicker";
+import { ResourceEditForm } from "@/components/ResourceEditForm";
 import type { ProjectAccess } from "@/lib/permissions";
 
 type ResourceRow = {
@@ -19,6 +21,7 @@ type ResourceRow = {
   folder: string;
   visibility: string;
   createdAt: Date;
+  uploadedById: string;
   uploadedBy: { name: string };
 };
 
@@ -30,9 +33,19 @@ function FolderIcon() {
   );
 }
 
-function Row({ r, canManage }: { r: ResourceRow; canManage: boolean }) {
+function Row({
+  r,
+  canManage,
+  editable,
+  folders,
+}: {
+  r: ResourceRow;
+  canManage: boolean;
+  editable: boolean;
+  folders: string[];
+}) {
   const [bg, fg] = KIND_COLORS[r.kind] ?? KIND_COLORS.LINK;
-  return (
+  const card = (
     <Card className="flex items-center gap-4 px-5 py-4 transition-colors hover:border-line-strong">
       <KindBadge kind={r.kind} bg={bg} fg={fg} />
       <div className="min-w-0 flex-1">
@@ -83,16 +96,30 @@ function Row({ r, canManage }: { r: ResourceRow; canManage: boolean }) {
       ) : null}
     </Card>
   );
+
+  if (!editable) return card;
+  return (
+    <div className="flex flex-col">
+      {card}
+      <div className="border border-t-0 border-line-soft bg-sand/40 px-5 py-1.5">
+        <Details label="Edit details">
+          <ResourceEditForm resource={r} folders={folders} />
+        </Details>
+      </div>
+    </div>
+  );
 }
 
 export async function ResourcesTab({
   projectId,
   access,
   signedIn,
+  userId,
 }: {
   projectId: string;
   access: ProjectAccess;
   signedIn: boolean;
+  userId: string | null;
 }) {
   // Three-tier visibility: PUBLIC for anyone, MEMBERS for any signed-in
   // member of the platform, TEAM for the project team — matching the
@@ -127,8 +154,8 @@ export async function ResourcesTab({
           <form action={addResourceAction} className="flex flex-col gap-3.5">
             <input type="hidden" name="projectId" value={projectId} />
             <div className="grid gap-3.5 sm:grid-cols-[1fr_140px_100px]">
-              <Field label="Title">
-                <input name="title" required placeholder="Literature review — living document" />
+              <Field label="Title" hint="optional — defaults to the file's name">
+                <input name="title" placeholder="Literature review — living document" />
               </Field>
               <Field label="Kind">
                 <select name="kind" defaultValue="AUTO">
@@ -142,17 +169,7 @@ export async function ResourcesTab({
                 <input name="version" defaultValue="v1" />
               </Field>
             </div>
-            <Field
-              label="Folder"
-              hint="optional — use / for subfolders, e.g. Data/Raw. New names create the folder."
-            >
-              <input name="folder" list="existing-folders" placeholder="Literature" />
-              <datalist id="existing-folders">
-                {existingFolders.map((f) => (
-                  <option key={f} value={f} />
-                ))}
-              </datalist>
-            </Field>
+            <FolderPicker folders={existingFolders} />
             <Field label="Upload a file" hint="up to 25 MB — PDF, data, slides, video, notebooks, HTML presentations">
               <input type="file" name="file" />
             </Field>
@@ -194,7 +211,13 @@ export async function ResourcesTab({
       ) : (
         <>
           {(groups.get("") ?? []).map((r) => (
-            <Row key={r.id} r={r} canManage={access.canManage} />
+            <Row
+              key={r.id}
+              r={r}
+              canManage={access.canManage}
+              editable={access.canManage || r.uploadedById === userId}
+              folders={existingFolders}
+            />
           ))}
 
           {folderNames.map((folder) => (
@@ -207,7 +230,13 @@ export async function ResourcesTab({
                 <span className="text-[11.5px] text-muted">{groups.get(folder)!.length}</span>
               </div>
               {groups.get(folder)!.map((r) => (
-                <Row key={r.id} r={r} canManage={access.canManage} />
+                <Row
+                  key={r.id}
+                  r={r}
+                  canManage={access.canManage}
+                  editable={access.canManage || r.uploadedById === userId}
+                  folders={existingFolders}
+                />
               ))}
             </div>
           ))}
