@@ -136,7 +136,7 @@ export async function MeetingsTab({
                     <input name="title" required placeholder="Slides, agenda, recording…" />
                   </Field>
                   <Field label="File" className="min-w-[220px] flex-1">
-                    <input type="file" name="file" required className="!border-dashed !py-2" />
+                    <input type="file" name="file" required />
                   </Field>
                   <button
                     type="submit"

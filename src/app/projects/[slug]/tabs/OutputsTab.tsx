@@ -98,7 +98,7 @@ export function OutputsTab({
               label="Archive a copy"
               hint="optional but wise — /publications shouldn't depend on external links staying alive. PDF views in-app."
             >
-              <input type="file" name="file" className="!border-dashed !py-2" />
+              <input type="file" name="file" />
             </Field>
             <p className="text-[12.5px] leading-relaxed text-muted">
               The author line is generated automatically from the CRediT roles on the Team tab, in

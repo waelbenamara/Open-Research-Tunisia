@@ -49,7 +49,6 @@ export function ProfileEditForm({
               type="file"
               name="avatar"
               accept="image/png,image/jpeg,image/webp,image/gif"
-              className="!border-none !p-0 text-[13px]"
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 setPreview(f ? URL.createObjectURL(f) : null);

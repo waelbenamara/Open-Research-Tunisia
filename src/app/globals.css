@@ -114,15 +114,11 @@
   }
 }
 
-/* Native controls styled to match the paper palette */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="url"],
-input[type="number"],
-input[type="date"],
-input[type="datetime-local"],
-input[type="search"],
+/* ── Native controls, styled to the paper palette ──────────────────────────
+   The selector must catch `<input>` with NO type attribute — most inputs in
+   the codebase are written that way, and `input[type="text"]` does not match
+   them. So: style all inputs, opt OUT the special kinds. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]),
 textarea,
 select {
   border: 1px solid var(--color-line-input);
@@ -132,17 +128,90 @@ select {
   width: 100%;
   box-sizing: border-box;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:hover:not(:focus):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+textarea:hover:not(:focus),
+select:hover:not(:focus) {
+  border-color: var(--color-line-strong);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--color-brick);
+  box-shadow: 0 0 0 3px var(--color-brick-tint);
+  outline: none;
+}
+
+::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
 }
 
 textarea {
   line-height: 1.55;
   resize: vertical;
+}
+
+/* Selects: replace the platform chevron with one that matches the ink. */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e675a' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+/* File inputs: a real drop-zone look instead of the bare browser default. */
+input[type="file"] {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px dashed var(--color-line-strong);
+  background: var(--color-sand);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--color-ink-4);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+input[type="file"]:hover {
+  border-color: var(--color-brick);
+  background: var(--color-tint);
+}
+input[type="file"]::file-selector-button {
+  appearance: none;
+  border: 1px solid var(--color-line-input);
+  border-radius: 0;
+  background: var(--color-card);
+  color: var(--color-ink-3);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+input[type="file"]::file-selector-button:hover {
+  border-color: var(--color-brick);
+  color: var(--color-brick);
+}
+
+/* Checkboxes, radios, and range sliders take the brand color. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-brick);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+input[type="range"] {
+  accent-color: var(--color-brick);
+  width: 100%;
+  cursor: pointer;
 }
 
 label {

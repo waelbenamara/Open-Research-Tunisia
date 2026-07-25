@@ -318,7 +318,7 @@ export default async function WorkshopPage({
                         </Field>
                       </div>
                       <Field label="Upload a file" hint="up to 25 MB">
-                        <input type="file" name="file" className="!border-dashed !py-2" />
+                        <input type="file" name="file" />
                       </Field>
                       <Field label="…or link to it">
                         <input name="url" placeholder="https://…" />

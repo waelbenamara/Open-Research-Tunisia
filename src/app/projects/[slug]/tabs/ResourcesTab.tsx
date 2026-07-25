@@ -55,7 +55,7 @@ export async function ResourcesTab({
               </Field>
             </div>
             <Field label="Upload a file" hint="up to 25 MB — PDF, data, slides, video, notebooks">
-              <input type="file" name="file" className="!border-dashed !py-2" />
+              <input type="file" name="file" />
             </Field>
             <Field label="…or link to it" hint="Drive, Colab, GitHub, Zenodo — anything with a URL">
               <input name="url" placeholder="https://…" />
