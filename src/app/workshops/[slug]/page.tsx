@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canManageWorkshop } from "@/lib/permissions";
-import { dateTime, fullDate, parseList } from "@/lib/format";
+import { dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
 import { RESOURCE_KINDS } from "@/lib/enums";
@@ -361,12 +361,19 @@ export default async function WorkshopPage({
                           {locked ? (
                             <span className="text-[12.5px] text-muted">Enrol to access</span>
                           ) : r.filePath ? (
-                            <a
-                              href={`/api/resources/${r.id}/download`}
-                              className="text-[13px] font-semibold"
-                            >
-                              Download
-                            </a>
+                            <span className="flex items-center gap-3">
+                              {viewableKind(fileExt(r.filePath)) ? (
+                                <a href={`/resources/${r.id}`} className="text-[13px] font-semibold">
+                                  View
+                                </a>
+                              ) : null}
+                              <a
+                                href={`/api/resources/${r.id}/download`}
+                                className="text-[13px] font-semibold text-ink-4"
+                              >
+                                Download
+                              </a>
+                            </span>
                           ) : r.url ? (
                             <a
                               href={r.url}

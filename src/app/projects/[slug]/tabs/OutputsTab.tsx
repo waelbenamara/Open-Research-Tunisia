@@ -11,6 +11,7 @@ type Output = {
   type: string;
   url: string | null;
   doi: string | null;
+  filePath: string | null;
   license: string;
   venue: string | null;
   authorsLine: string;
@@ -93,6 +94,12 @@ export function OutputsTab({
             <Field label="Published on" hint="optional">
               <input name="publishedAt" type="date" />
             </Field>
+            <Field
+              label="Archive a copy"
+              hint="optional but wise — /publications shouldn't depend on external links staying alive. PDF views in-app."
+            >
+              <input type="file" name="file" className="!border-dashed !py-2" />
+            </Field>
             <p className="text-[12.5px] leading-relaxed text-muted">
               The author line is generated automatically from the CRediT roles on the Team tab, in
               author order.
@@ -141,6 +148,11 @@ export function OutputsTab({
                 {o.url ? (
                   <a href={o.url} target="_blank" rel="noopener noreferrer" className="font-semibold">
                     Open
+                  </a>
+                ) : null}
+                {o.filePath ? (
+                  <a href={`/api/outputs/${o.id}/file`} className="font-semibold">
+                    Archived copy
                   </a>
                 ) : null}
               </div>

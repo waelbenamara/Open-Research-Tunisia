@@ -38,6 +38,32 @@ const ALLOWED = new Set([
 
 export type StoredFile = { filePath: string; fileSize: number; ext: string };
 
+/** Content types for serving stored files — shared by the download/inline routes. */
+export const MIME_BY_EXT: Record<string, string> = {
+  pdf: "application/pdf",
+  csv: "text/csv",
+  tsv: "text/tab-separated-values",
+  json: "application/json",
+  jsonl: "application/x-ndjson",
+  geojson: "application/geo+json",
+  txt: "text/plain",
+  md: "text/markdown",
+  py: "text/plain",
+  r: "text/plain",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  zip: "application/zip",
+};
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? "resources";

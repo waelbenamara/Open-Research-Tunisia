@@ -262,6 +262,9 @@ model Resource {
   workshop    Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
   sessionId   String?
   session     WorkshopSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// A file attached to a specific meeting — agenda, slides, recording.
+  meetingId   String?
+  meeting     Meeting?  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
   uploadedById String
   uploadedBy   User    @relation(fields: [uploadedById], references: [id])
@@ -269,6 +272,7 @@ model Resource {
 
   @@index([projectId])
   @@index([workshopId])
+  @@index([meetingId])
 }
 
 model Meeting {
@@ -283,6 +287,8 @@ model Meeting {
   authorId       String
   author         User     @relation(fields: [authorId], references: [id])
   createdAt      DateTime @default(now())
+
+  resources Resource[]
 
   @@index([projectId])
 }
@@ -366,6 +372,9 @@ model Output {
   type        String    @default("PREPRINT")
   url         String?
   doi         String?
+  /// Archived copy of the artifact, so /publications survives link rot.
+  filePath    String?
+  fileSize    Int?
   license     String    @default("CC-BY-4.0")
   venue       String?
   authorsLine String    @default("")

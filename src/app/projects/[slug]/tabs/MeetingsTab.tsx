@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { fullDate } from "@/lib/format";
-import { addMeetingAction } from "@/actions/projects";
+import { fileExt, fileSize, fullDate, viewableKind } from "@/lib/format";
+import { addMeetingAction, addResourceAction } from "@/actions/projects";
 import { Card, EmptyState, Field } from "@/components/ui";
 import { Details } from "@/components/Collapse";
 import type { ProjectAccess } from "@/lib/permissions";
@@ -23,7 +23,10 @@ export async function MeetingsTab({
 
   const meetings = await db.meeting.findMany({
     where: { projectId },
-    include: { author: { select: { name: true } } },
+    include: {
+      author: { select: { name: true } },
+      resources: { orderBy: { createdAt: "asc" } },
+    },
     orderBy: { heldAt: "desc" },
   });
 
@@ -99,6 +102,53 @@ export async function MeetingsTab({
                 </ul>
               </div>
             ) : null}
+            {m.resources.length > 0 ? (
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+                  Attachments
+                </span>
+                {m.resources.map((r) => (
+                  <a
+                    key={r.id}
+                    href={
+                      r.filePath && viewableKind(fileExt(r.filePath))
+                        ? `/resources/${r.id}`
+                        : r.filePath
+                          ? `/api/resources/${r.id}/download`
+                          : r.url ?? "#"
+                    }
+                    className="border border-line bg-tint px-2.5 py-1 text-[12px] font-medium no-underline hover:border-brick hover:text-brick hover:no-underline"
+                  >
+                    {r.title}
+                    {r.fileSize ? <span className="text-muted"> · {fileSize(r.fileSize)}</span> : null}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+
+            {access.canManage ? (
+              <Details label="+ Attach a file to this meeting">
+                <form action={addResourceAction} className="flex flex-wrap items-end gap-3">
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <input type="hidden" name="meetingId" value={m.id} />
+                  <input type="hidden" name="kind" value="AUTO" />
+                  <Field label="Title" className="min-w-[200px] flex-1">
+                    <input name="title" required placeholder="Slides, agenda, recording…" />
+                  </Field>
+                  <Field label="File" className="min-w-[220px] flex-1">
+                    <input type="file" name="file" required className="!border-dashed !py-2" />
+                  </Field>
+                  <button
+                    type="submit"
+                    className="mb-0.5 cursor-pointer border-none bg-brick px-4 py-2.5 text-[12.5px] font-semibold"
+                    style={{ color: "#faf8f3" }}
+                  >
+                    Attach
+                  </button>
+                </form>
+              </Details>
+            ) : null}
+
             <div className="text-[12.5px] text-muted">Notes by {m.author.name}</div>
           </Card>
         ))

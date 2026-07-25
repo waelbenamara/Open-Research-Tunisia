@@ -108,6 +108,11 @@ export default async function PublicationsPage() {
                               Read it
                             </a>
                           ) : null}
+                          {o.filePath ? (
+                            <a href={`/api/outputs/${o.id}/file`} className="font-semibold">
+                              Archived copy
+                            </a>
+                          ) : null}
                         </div>
                       </Card>
                     );

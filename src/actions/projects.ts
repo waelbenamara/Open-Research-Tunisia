@@ -503,6 +503,7 @@ export async function addResourceAction(formData: FormData) {
   const projectId = String(formData.get("projectId") || "") || null;
   const workshopId = String(formData.get("workshopId") || "") || null;
   const sessionId = String(formData.get("sessionId") || "") || null;
+  const meetingId = String(formData.get("meetingId") || "") || null;
 
   const user = await requireUser();
 
@@ -527,6 +528,14 @@ export async function addResourceAction(formData: FormData) {
       select: { workshopId: true },
     });
     if (!session || session.workshopId !== workshopId) throw new Error("FORBIDDEN");
+  }
+  // A meeting attachment must belong to the project being managed.
+  if (meetingId) {
+    const meeting = await db.meeting.findUnique({
+      where: { id: meetingId },
+      select: { projectId: true },
+    });
+    if (!meeting || meeting.projectId !== projectId) throw new Error("FORBIDDEN");
   }
 
   const title = String(formData.get("title") || "").trim();
@@ -558,6 +567,7 @@ export async function addResourceAction(formData: FormData) {
       projectId,
       workshopId,
       sessionId,
+      meetingId,
       uploadedById: user.id,
     },
   });
@@ -886,10 +896,17 @@ export async function addOutputAction(formData: FormData) {
   const typeRaw = String(formData.get("type") || "PREPRINT");
   const statusRaw = String(formData.get("status") || "DRAFT");
   const licenseRaw = String(formData.get("license") || "CC-BY-4.0");
+
+  // Archived copy — /publications shouldn't depend on external hosts surviving.
+  const upload = formData.get("file");
+  const stored = upload instanceof File ? await storeUpload(upload) : null;
+
   await db.output.create({
     data: {
       projectId,
       title,
+      filePath: stored?.filePath ?? null,
+      fileSize: stored?.fileSize ?? null,
       type: oneOf(OUTPUT_TYPES, typeRaw) ? typeRaw : "PREPRINT",
       url: String(formData.get("url") || "").trim() || null,
       doi: String(formData.get("doi") || "").trim() || null,

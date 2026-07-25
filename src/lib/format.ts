@@ -1,3 +1,25 @@
+/** Extension of a stored file key like "supabase:ab12.pdf" or a filename. */
+export function fileExt(pathOrName: string | null | undefined): string {
+  return (pathOrName ?? "").split(".").pop()?.toLowerCase() ?? "";
+}
+
+/**
+ * How a stored file can be shown in the browser, if at all.
+ * SVG is deliberately excluded — inline SVG from user uploads can run scripts
+ * in our origin, so it stays download-only.
+ */
+export function viewableKind(
+  ext: string,
+): "pdf" | "image" | "video" | "audio" | "text" | null {
+  if (ext === "pdf") return "pdf";
+  if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (["mp4", "webm", "mov"].includes(ext)) return "video";
+  if (["mp3", "wav"].includes(ext)) return "audio";
+  if (["txt", "md", "csv", "tsv", "json", "jsonl", "py", "r", "geojson"].includes(ext))
+    return "text";
+  return null;
+}
+
 /** The picture to show for a user: an uploaded photo wins over an OAuth one. */
 export function avatarSrc(u: {
   id: string;

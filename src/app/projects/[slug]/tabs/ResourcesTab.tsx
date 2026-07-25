@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { KIND_COLORS } from "@/lib/theme";
 import { RESOURCE_KINDS, VISIBILITIES } from "@/lib/enums";
-import { fileSize, shortDate } from "@/lib/format";
+import { fileExt, fileSize, shortDate, viewableKind } from "@/lib/format";
 import { addResourceAction, deleteResourceAction } from "@/actions/projects";
 import { Card, EmptyState, Field, KindBadge } from "@/components/ui";
 import { Details } from "@/components/Collapse";
@@ -120,12 +120,19 @@ export async function ResourcesTab({
                 </span>
               ) : null}
               {r.filePath ? (
-                <a
-                  href={`/api/resources/${r.id}/download`}
-                  className="text-[13px] font-semibold"
-                >
-                  Download
-                </a>
+                <span className="flex items-center gap-3">
+                  {viewableKind(fileExt(r.filePath)) ? (
+                    <a href={`/resources/${r.id}`} className="text-[13px] font-semibold">
+                      View
+                    </a>
+                  ) : null}
+                  <a
+                    href={`/api/resources/${r.id}/download`}
+                    className="text-[13px] font-semibold text-ink-4"
+                  >
+                    Download
+                  </a>
+                </span>
               ) : r.url ? (
                 <a
                   href={r.url}
