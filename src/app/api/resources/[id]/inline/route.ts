@@ -22,6 +22,7 @@ export async function GET(
     select: {
       title: true,
       filePath: true,
+      fileSize: true,
       visibility: true,
       projectId: true,
       workshopId: true,
@@ -49,10 +50,18 @@ export async function GET(
     return NextResponse.redirect(resolved.url);
   }
 
-  // HTML (Manim Slides etc.) is always served by US, never redirected, so the
-  // sandbox CSP below is guaranteed: scripts may run, but in an opaque origin
-  // with no cookies, storage, or same-origin requests. Without this header an
-  // uploaded page could act as the signed-in viewer.
+  // HTML (Manim Slides etc.) is normally served by US, never redirected, so
+  // the sandbox CSP below is guaranteed: scripts may run, but in an opaque
+  // origin with no cookies, storage, or same-origin requests.
+  //
+  // Exception: on serverless hosts the response body is capped (~4.5 MB on
+  // Vercel), so LARGE HTML from Supabase redirects to the signed URL instead.
+  // That's still safe — it serves from supabase.co, a different origin that
+  // can't touch our cookies — just without the belt-and-suspenders CSP.
+  if (isHtml && resolved.kind === "redirect" && (resource.fileSize ?? 0) > 4 * 1024 * 1024) {
+    return NextResponse.redirect(resolved.url);
+  }
+
   let body: Buffer;
   if (resolved.kind === "buffer") {
     body = resolved.body;

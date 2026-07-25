@@ -14,3 +14,7 @@ storage/uploads/*
 !storage/uploads/.gitkeep
 
 tsconfig.tsbuildinfo
+
+# manual env copies
+env copy
+*.env.bak
