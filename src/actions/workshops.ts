@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { canCreateProject } from "@/lib/permissions";
 import { audit, notify } from "@/lib/notify";
 import { certCode, slugify } from "@/lib/format";
+import { sendEmail } from "@/lib/email";
+import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
 import type { ActionState } from "./auth";
 
 async function assertFacilitator(workshopId: string) {
@@ -159,6 +162,7 @@ export async function enrollAction(formData: FormData) {
   const workshop = await db.workshop.findUnique({
     where: { id: workshopId },
     include: {
+      facilitator: { select: { name: true } },
       enrollments: { where: { status: { in: ["ENROLLED", "COMPLETED"] } }, select: { id: true } },
     },
   });
@@ -205,6 +209,50 @@ export async function enrollAction(formData: FormData) {
     link: `/workshops/${workshop.slug}`,
   });
 
+  // Confirm enrolment by email too (respecting the member's email preference).
+  if (acted) {
+    const me = await db.user.findUnique({
+      where: { id: user.id },
+      select: { email: true, name: true, emailUpdates: true },
+    });
+    if (me?.emailUpdates) {
+      const h = await headers();
+      const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+      const started = workshop.startDate.toLocaleDateString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+      const template: EmailTemplate = {
+        preheader: full
+          ? `You're on the waitlist for ${workshop.title}.`
+          : `You're enrolled in ${workshop.title}.`,
+        heading: full ? "You're on the waitlist" : "You're enrolled",
+        greeting: `Hi ${me.name.split(" ")[0]},`,
+        paragraphs: full
+          ? [
+              `“${workshop.title}” is currently full, so you've been added to the waitlist. If a seat opens you'll be moved up automatically — and emailed.`,
+              `Facilitated by ${workshop.facilitator.name} · starts ${started}.`,
+            ]
+          : [
+              `You're enrolled in “${workshop.title}”. Session links, recordings and materials will appear on the workshop page.`,
+              `Facilitated by ${workshop.facilitator.name} · starts ${started}.`,
+            ],
+        cta: { label: "View the workshop", url: `${origin}/workshops/${workshop.slug}` },
+        footerNote: `Sent to ${me.email} because you ${full ? "joined the waitlist for" : "enrolled in"} this workshop. Manage email preferences in your profile.`,
+      };
+      await sendEmail({
+        to: me.email,
+        subject: full
+          ? `Waitlisted: ${workshop.title} — Open Research Tunisia`
+          : `You're enrolled: ${workshop.title} — Open Research Tunisia`,
+        text: renderEmailText(template),
+        html: renderEmailHtml(template),
+      });
+    }
+  }
+
   revalidatePath(`/workshops/${workshop.slug}`);
   revalidatePath("/dashboard");
 }
@@ -240,6 +288,32 @@ export async function dropEnrollmentAction(formData: FormData) {
         body: "You've been moved off the waitlist and are now enrolled.",
         link: `/workshops/${next.workshop.slug}`,
       });
+      // Being promoted off the waitlist is exactly the kind of thing to email.
+      const promoted = await db.user.findUnique({
+        where: { id: next.userId },
+        select: { email: true, name: true, emailUpdates: true },
+      });
+      if (promoted?.emailUpdates) {
+        const h = await headers();
+        const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+        const template: EmailTemplate = {
+          preheader: `A seat opened — you're now enrolled in ${next.workshop.title}.`,
+          heading: "A seat opened — you're in",
+          greeting: `Hi ${promoted.name.split(" ")[0]},`,
+          paragraphs: [
+            `Good news: a seat opened in “${next.workshop.title}” and you've been moved off the waitlist. You're now enrolled.`,
+            "Session links, recordings and materials are on the workshop page.",
+          ],
+          cta: { label: "View the workshop", url: `${origin}/workshops/${next.workshop.slug}` },
+          footerNote: `Sent to ${promoted.email} because a seat opened in a workshop you were waitlisted for.`,
+        };
+        await sendEmail({
+          to: promoted.email,
+          subject: `A seat opened: ${next.workshop.title} — Open Research Tunisia`,
+          text: renderEmailText(template),
+          html: renderEmailHtml(template),
+        });
+      }
     }
   }
 
