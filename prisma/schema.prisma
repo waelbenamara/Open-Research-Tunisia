@@ -86,6 +86,7 @@ model User {
   notifications    Notification[]
   sentMessages     DirectMessage[]   @relation("DMSender")
   receivedMessages DirectMessage[]   @relation("DMRecipient")
+  createdEvents    ProjectEvent[]
   auditLogs        AuditLog[]
   bookmarks        Bookmark[]
   sessions         Session[]
@@ -191,9 +192,28 @@ model Project {
   contributions Contribution[]
   outputs       Output[]
   bookmarks     Bookmark[]
+  events        ProjectEvent[]
 
   @@index([stage])
   @@index([approvalStatus])
+}
+
+/// A dated entry on a project's calendar — a deadline, milestone, or event.
+model ProjectEvent {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String    @default("")
+  startAt     DateTime
+  endAt       DateTime?
+  // EVENT | DEADLINE | MILESTONE | MEETING
+  kind        String    @default("EVENT")
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([projectId, startAt])
 }
 
 model ProjectMember {

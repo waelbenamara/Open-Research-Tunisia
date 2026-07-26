@@ -14,6 +14,7 @@ import { MeetingsTab } from "./tabs/MeetingsTab";
 import { DiscussionTab } from "./tabs/DiscussionTab";
 import { TeamTab } from "./tabs/TeamTab";
 import { TasksTab } from "./tabs/TasksTab";
+import { CalendarTab } from "./tabs/CalendarTab";
 import { ApplicationsTab } from "./tabs/ApplicationsTab";
 import { OutputsTab } from "./tabs/OutputsTab";
 
@@ -91,6 +92,7 @@ export default async function ProjectPage({
   if (access.canSeeInternal) {
     tabs.push(
       ["tasks", `Tasks${openTaskCount ? ` (${openTaskCount})` : ""}`],
+      ["calendar", "Calendar"],
       ["meetings", "Meeting notes"],
       ["discussion", "Discussion"],
     );
@@ -204,6 +206,9 @@ export default async function ProjectPage({
           ) : null}
           {tab === "tasks" && access.canSeeInternal ? (
             <TasksTab projectId={project.id} access={access} members={project.members} userId={user?.id ?? null} />
+          ) : null}
+          {tab === "calendar" && access.canSeeInternal ? (
+            <CalendarTab projectId={project.id} projectSlug={project.slug} access={access} />
           ) : null}
           {tab === "meetings" && access.canSeeInternal ? (
             <MeetingsTab projectId={project.id} access={access} />

@@ -16,6 +16,7 @@ import {
   CONTRIBUTION_TYPES,
   CREDIT_ROLES,
   ETHICS_STATUSES,
+  EVENT_KINDS,
   LICENSES,
   OUTPUT_STATUSES,
   OUTPUT_TYPES,
@@ -1215,6 +1216,59 @@ export async function logContributionAction(formData: FormData) {
   });
   revalidatePath(`/projects/${project.slug}`);
   revalidatePath("/profile");
+}
+
+/* ── Calendar ───────────────────────────────────────────── */
+
+export async function addProjectEventAction(formData: FormData) {
+  const projectId = String(formData.get("projectId"));
+  const { user, project } = await assertManage(projectId);
+
+  const title = String(formData.get("title") || "").trim();
+  const startRaw = String(formData.get("startAt") || "");
+  if (!title || !startRaw) return;
+  const start = new Date(startRaw);
+  if (isNaN(start.getTime())) return;
+  const endRaw = String(formData.get("endAt") || "");
+  const end = endRaw ? new Date(endRaw) : null;
+  const kindRaw = String(formData.get("kind") || "EVENT");
+
+  await db.projectEvent.create({
+    data: {
+      projectId,
+      title,
+      description: String(formData.get("description") || "").trim(),
+      startAt: start,
+      endAt: end && !isNaN(end.getTime()) ? end : null,
+      kind: oneOf(EVENT_KINDS, kindRaw) ? kindRaw : "EVENT",
+      createdById: user.id,
+    },
+  });
+
+  await audit(user.id, "EVENT_ADD", "Project", projectId, title);
+  await notify(await projectAudience(projectId, user.id), {
+    type: "EVENT",
+    title: `New on the ${project.title} calendar`,
+    body: `${title} — ${start.toLocaleDateString("en-GB", { dateStyle: "medium" })}`,
+    link: `/projects/${project.slug}?tab=calendar`,
+  });
+  revalidatePath(`/projects/${project.slug}`);
+}
+
+export async function deleteProjectEventAction(formData: FormData) {
+  const user = await requireUser();
+  const eventId = String(formData.get("eventId"));
+  const event = await db.projectEvent.findUnique({
+    where: { id: eventId },
+    include: { project: { select: { id: true, slug: true, leadId: true } } },
+  });
+  if (!event) return;
+  const access = await getProjectAccess(event.project.id, event.project.leadId, user);
+  if (!access.canManage) throw new Error("FORBIDDEN");
+
+  await db.projectEvent.delete({ where: { id: eventId } });
+  await audit(user.id, "EVENT_DELETE", "Project", event.project.id, event.title);
+  revalidatePath(`/projects/${event.project.slug}`);
 }
 
 /* ── Bookmarks ──────────────────────────────────────────── */

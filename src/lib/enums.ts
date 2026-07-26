@@ -72,6 +72,8 @@ export const APPROVAL_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
 
 export const TASK_EFFORTS = ["S", "M", "L"] as const;
 
+export const EVENT_KINDS = ["EVENT", "DEADLINE", "MILESTONE", "MEETING"] as const;
+
 export const LICENSES = [
   "CC-BY-4.0",
   "CC-BY-SA-4.0",
