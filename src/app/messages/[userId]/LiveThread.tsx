@@ -55,10 +55,13 @@ export function LiveThread({
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showAttach, setShowAttach] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const mediaRef = useRef<HTMLInputElement>(null);
   const lastTypingSent = useRef(0);
   const cursor = useRef<string>(initialMessages[initialMessages.length - 1]?.id ?? "");
 
@@ -147,10 +150,12 @@ export function LiveThread({
     });
   }
 
-  function send() {
-    const body = value.trim();
+  function send(quick?: string) {
+    const body = (quick ?? value).trim();
     if ((!body && pending.length === 0) || sending) return;
     setError(null);
+    setShowEmoji(false);
+    setShowAttach(false);
     setSending(true);
 
     const tempId = `temp-${Math.floor(performance.now())}`;
@@ -220,12 +225,13 @@ export function LiveThread({
   const myLast = [...messages].reverse().find((m) => m.senderId === meId);
   const myLastSeen =
     myLast && seenTime >= new Date(myLast.createdAt).getTime() && !myLast.id.startsWith("temp-");
+  const empty = !value.trim() && pending.length === 0;
 
   let lastDay = "";
 
   return (
-    <div className="flex flex-col">
-      <div className="mb-2 flex items-center gap-2 text-[12.5px]">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="mb-2 flex items-center gap-2 px-1 text-[12.5px]">
         <span
           className={`relative inline-block h-[8px] w-[8px] rounded-full ${
             online ? "bg-olive pulse-online" : "bg-line-strong"
@@ -239,7 +245,7 @@ export function LiveThread({
 
       <div
         ref={scrollRef}
-        className="flex max-h-[56vh] min-h-[280px] flex-col gap-1.5 overflow-y-auto rounded-[14px] border border-line p-4"
+        className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto rounded-[14px] border border-line p-4"
         style={{
           background:
             "radial-gradient(var(--color-line-soft) 1px, transparent 1px) 0 0 / 20px 20px, linear-gradient(180deg, var(--color-card), var(--color-sand))",
@@ -383,35 +389,69 @@ export function LiveThread({
               </>
             ) : null}
 
+            {showAttach ? (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowAttach(false)} />
+                <div className="animate-popover absolute bottom-[52px] left-0 z-20 w-[214px] rounded-[14px] border border-line bg-card p-1.5 shadow-lg">
+                  <AttachOption
+                    icon={<CameraIcon />}
+                    label="Take photo"
+                    onClick={() => {
+                      setShowAttach(false);
+                      cameraRef.current?.click();
+                    }}
+                  />
+                  <AttachOption
+                    icon={<ImageIcon />}
+                    label="Photo & video"
+                    onClick={() => {
+                      setShowAttach(false);
+                      mediaRef.current?.click();
+                    }}
+                  />
+                  <AttachOption
+                    icon={<ClipIcon size={16} />}
+                    label="Upload a file"
+                    onClick={() => {
+                      setShowAttach(false);
+                      fileRef.current?.click();
+                    }}
+                  />
+                </div>
+              </>
+            ) : null}
+
             <div className="flex items-end gap-0 rounded-[22px] border border-line-input bg-card px-1 transition-colors focus-within:border-brick focus-within:shadow-[0_0_0_3px_var(--color-brick-tint)]">
               <button
                 type="button"
+                aria-label="Add photo or file"
+                onClick={() => {
+                  setShowEmoji(false);
+                  setShowAttach((v) => !v);
+                }}
+                className="grid h-[44px] w-[38px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-ink-4 transition-transform hover:scale-110 hover:text-brick"
+              >
+                <PlusIcon />
+              </button>
+              <button
+                type="button"
                 aria-label="Add emoji"
-                onClick={() => setShowEmoji((v) => !v)}
-                className={`grid h-[44px] w-[40px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-[18px] transition-transform hover:scale-110 ${
+                onClick={() => {
+                  setShowAttach(false);
+                  setShowEmoji((v) => !v);
+                }}
+                className={`grid h-[44px] w-[38px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-[18px] transition-transform hover:scale-110 ${
                   showEmoji ? "opacity-100" : "opacity-80 hover:opacity-100"
                 }`}
               >
                 😊
               </button>
-              <button
-                type="button"
-                aria-label="Attach files"
-                onClick={() => fileRef.current?.click()}
-                className="grid h-[44px] w-[36px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-ink-4 transition-transform hover:scale-110 hover:text-brick"
-              >
-                <ClipIcon size={18} />
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                multiple
-                hidden
-                onChange={(e) => {
-                  addFiles(e.target.files);
-                  e.target.value = "";
-                }}
-              />
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden
+                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+              <input ref={mediaRef} type="file" accept="image/*,video/*" multiple hidden
+                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
+              <input ref={fileRef} type="file" multiple hidden
+                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
               <textarea
                 ref={taRef}
                 value={value}
@@ -430,13 +470,13 @@ export function LiveThread({
               />
               <button
                 type="button"
-                onClick={send}
-                disabled={sending || (!value.trim() && pending.length === 0)}
-                aria-label="Send message"
+                onClick={() => send(empty ? "👍" : undefined)}
+                disabled={sending}
+                aria-label={empty ? "Send a thumbs up" : "Send message"}
                 className="m-1.5 grid h-[38px] w-[38px] shrink-0 cursor-pointer place-items-center self-end rounded-full border-none transition-transform hover:enabled:scale-105 active:enabled:scale-95 disabled:opacity-40"
                 style={{ background: "linear-gradient(135deg, #9a3b2b, #69241a)", color: "#faf8f3" }}
               >
-                {sending ? <Spinner /> : <PaperPlane />}
+                {sending ? <Spinner /> : empty ? <span className="text-[17px] leading-none">👍</span> : <PaperPlane />}
               </button>
             </div>
           </div>
@@ -550,6 +590,56 @@ function FileIcon() {
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function AttachOption({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] border-none bg-transparent px-2.5 py-2 text-left text-[13px] font-medium text-ink-3 hover:bg-tint hover:text-ink"
+    >
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brick-tint text-brick">
+        {icon}
+      </span>
+      {label}
+    </button>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M3 8.5A1.5 1.5 0 014.5 7h2l1.2-1.8h6.6L15.5 7h4A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx="12" cy="13" r="3.2" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ImageIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="9" cy="9.5" r="1.5" fill="currentColor" />
+      <path d="M4 17l5-5 4 4 2.5-2.5L20 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
