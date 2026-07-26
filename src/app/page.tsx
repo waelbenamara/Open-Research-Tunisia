@@ -189,60 +189,77 @@ export default async function DiscoverPage({
   return (
     <Shell className="pb-24">
       {showHero ? (
-        <div className="grid items-center gap-14 border-b border-line pb-14 pt-16 md:grid-cols-[1.45fr_1fr]">
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-block h-[9px] w-[9px] bg-brick" aria-hidden />
-              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brick">
-                An open initiative · Tunisia
-              </span>
+        <div className="border-b border-line pb-12 pt-10 md:pt-14">
+          <div className="grid items-center gap-9 md:grid-cols-[1.05fr_0.95fr] md:gap-12">
+            {/* Copy */}
+            <div className="animate-fade-up order-2 flex flex-col gap-5 md:order-1">
+              <div className="flex items-center gap-2.5">
+                <span className="inline-block h-[9px] w-[9px] rounded-full bg-brick" aria-hidden />
+                <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-brick">
+                  An open initiative · Tunisia
+                </span>
+              </div>
+              <h1 className="font-serif text-[clamp(36px,6.5vw,58px)] font-medium leading-[1.04] tracking-[-0.01em] balance">
+                Research shouldn&apos;t require{" "}
+                <span className="italic text-brick">permission</span>.
+              </h1>
+              <p className="max-w-[52ch] text-[16px] leading-[1.65] text-ink-3 pretty sm:text-[17px]">
+                Join real research projects as a contributor — no title, no affiliation, no
+                gatekeeper. Learn the craft in hands-on workshops and build a public, verifiable
+                record of the work you do.
+              </p>
+              {!user ? (
+                <div className="mt-1 flex flex-wrap gap-3">
+                  <LinkButton href="/register">Join the initiative</LinkButton>
+                  <LinkButton href="/about" variant="ghost">
+                    How it works
+                  </LinkButton>
+                </div>
+              ) : canCreateProject(user) ? (
+                <div className="mt-1 flex flex-wrap gap-3">
+                  <LinkButton href="/projects/new">Post a project</LinkButton>
+                  <LinkButton href="/dashboard" variant="ghost">
+                    My work
+                  </LinkButton>
+                </div>
+              ) : (
+                <div className="mt-1 flex flex-wrap gap-3">
+                  <LinkButton href={qs({ filter: "recruiting" })}>See what&apos;s recruiting</LinkButton>
+                  <LinkButton href="/request-posting-rights" variant="ghost">
+                    Request posting rights
+                  </LinkButton>
+                </div>
+              )}
             </div>
-            <h1 className="font-serif text-[54px] font-medium leading-[1.06] balance">
-              Research shouldn&apos;t require permission.
-            </h1>
-            <p className="max-w-[52ch] text-[17px] leading-[1.65] text-ink-3 pretty">
-              Join real research projects as a contributor — no title, no affiliation, no
-              gatekeeper. Learn the craft in hands-on workshops and build a public, verifiable
-              record of the work you do.
-            </p>
-            {!user ? (
-              <div className="mt-1 flex gap-3">
-                <LinkButton href="/register">Join the initiative</LinkButton>
-                <LinkButton href="/about" variant="ghost">
-                  How it works
-                </LinkButton>
+
+            {/* Artwork panel */}
+            <div className="order-1 md:order-2">
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[22px] border border-line shadow-[0_34px_70px_-34px_rgba(33,29,22,0.5)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/art.jpg"
+                  alt="Young Tunisian researchers and students lifting the country up through knowledge"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
               </div>
-            ) : canCreateProject(user) ? (
-              <div className="mt-1 flex gap-3">
-                <LinkButton href="/projects/new">Post a project</LinkButton>
-                <LinkButton href="/dashboard" variant="ghost">
-                  My work
-                </LinkButton>
-              </div>
-            ) : (
-              <div className="mt-1 flex gap-3">
-                <LinkButton href={qs({ filter: "recruiting" })}>See what&apos;s recruiting</LinkButton>
-                <LinkButton href="/request-posting-rights" variant="ghost">
-                  Request posting rights
-                </LinkButton>
-              </div>
-            )}
+            </div>
           </div>
-          <div className="flex flex-col gap-6 border-l border-line pl-9">
+
+          {/* Pillars */}
+          <div className="mt-11 grid gap-3.5 sm:grid-cols-3">
             {heroPillars.map((p, i) => (
-              <div key={p.title} className="flex gap-4">
-                <div className="font-serif text-[26px] font-medium leading-none text-brick" aria-hidden>
+              <div key={p.title} className="rounded-[14px] border border-line bg-card p-4">
+                <div
+                  className="mb-2.5 grid h-8 w-8 place-items-center rounded-full font-serif text-[15px] font-semibold"
+                  style={{ background: "var(--color-brick-tint)", color: "var(--color-brick)" }}
+                  aria-hidden
+                >
                   {i + 1}
                 </div>
-                <div>
-                  <div className="text-[14.5px] font-semibold leading-snug">{p.title}</div>
-                  <p className="mt-1 text-[13px] leading-[1.6] text-ink-4 pretty">{p.body}</p>
-                </div>
+                <div className="text-[14px] font-semibold leading-snug text-ink">{p.title}</div>
+                <p className="mt-1 text-[12.5px] leading-[1.6] text-ink-4 pretty">{p.body}</p>
               </div>
             ))}
-            <div className="mt-1 text-[12.5px] text-muted">
-              How it works, in full — <Link href="/about">about the initiative</Link>.
-            </div>
           </div>
         </div>
       ) : null}
