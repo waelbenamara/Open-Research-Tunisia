@@ -940,6 +940,46 @@ export async function deleteTaskAction(formData: FormData) {
   revalidatePath(`/projects/${task.project.slug}`);
 }
 
+/** Reassign (or unassign) a task. A manager power: contributors claim/release
+ *  their own tasks, but only leads/maintainers hand work to someone else. */
+export async function reassignTaskAction(formData: FormData) {
+  const user = await requireUser();
+  const taskId = String(formData.get("taskId"));
+  const assigneeRaw = String(formData.get("assigneeId") || "");
+  const task = await db.task.findUnique({
+    where: { id: taskId },
+    include: { project: { select: { id: true, slug: true, leadId: true, title: true } } },
+  });
+  if (!task) return;
+
+  const access = await getProjectAccess(task.project.id, task.project.leadId, user);
+  if (!access.canManage) throw new Error("FORBIDDEN");
+
+  const assigneeId = assigneeRaw || null;
+  if (assigneeId === task.assigneeId) return; // no change
+
+  // You can only assign the lead or an actual project member.
+  if (assigneeId && assigneeId !== task.project.leadId) {
+    const member = await db.projectMember.findUnique({
+      where: { projectId_userId: { projectId: task.project.id, userId: assigneeId } },
+    });
+    if (!member) throw new Error("The assignee must be a project member.");
+  }
+
+  await db.task.update({ where: { id: taskId }, data: { assigneeId } });
+  await audit(user.id, "TASK_REASSIGN", "Project", task.project.id, `${task.title} → ${assigneeId ?? "unassigned"}`);
+
+  if (assigneeId && assigneeId !== user.id) {
+    await notify(assigneeId, {
+      type: "TASK_ASSIGNED",
+      title: `Task assigned to you: ${task.title}`,
+      body: `${user.name} assigned you a task on ${task.project.title}.`,
+      link: `/projects/${task.project.slug}?tab=tasks`,
+    });
+  }
+  revalidatePath(`/projects/${task.project.slug}`);
+}
+
 export async function updateTaskStatusAction(formData: FormData) {
   const user = await requireUser();
   const taskId = String(formData.get("taskId"));

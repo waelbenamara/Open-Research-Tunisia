@@ -315,7 +315,13 @@ export default async function ProjectPage({
             />
           ) : null}
           {tab === "tasks" && access.canSeeInternal ? (
-            <TasksTab projectId={project.id} access={access} members={project.members} userId={user?.id ?? null} />
+            <TasksTab
+              projectId={project.id}
+              access={access}
+              members={project.members}
+              userId={user?.id ?? null}
+              lead={{ userId: project.leadId, name: project.lead.name, avatarColor: project.lead.avatarColor }}
+            />
           ) : null}
           {tab === "calendar" && access.canSeeInternal ? (
             <CalendarTab projectId={project.id} projectSlug={project.slug} access={access} />

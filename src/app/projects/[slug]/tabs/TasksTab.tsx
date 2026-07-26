@@ -10,6 +10,7 @@ import {
 } from "@/actions/projects";
 import { Avatar, Card, EmptyState, Field, Pill, SectionLabel } from "@/components/ui";
 import { Details } from "@/components/Collapse";
+import { AssigneePicker } from "./AssigneePicker";
 import type { ProjectAccess } from "@/lib/permissions";
 
 type Member = { userId: string; user: { name: string; avatarColor: string } };
@@ -49,11 +50,13 @@ export async function TasksTab({
   access,
   members,
   userId,
+  lead,
 }: {
   projectId: string;
   access: ProjectAccess;
   members: Member[];
   userId: string | null;
+  lead: { userId: string; name: string; avatarColor: string };
 }) {
   // Defense in depth — the page hides this tab for outsiders, and the board
   // itself refuses to render for them too.
@@ -81,6 +84,14 @@ export async function TasksTab({
   const goodFirst = tasks.filter((t) => t.goodFirstTask && t.status === "OPEN" && !t.assigneeId);
   const now = new Date();
 
+  // Everyone a manager can hand a task to: the lead plus every member.
+  const assignable = [
+    { userId: lead.userId, name: lead.name },
+    ...members
+      .filter((m) => m.userId !== lead.userId)
+      .map((m) => ({ userId: m.userId, name: m.user.name })),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       {access.canManage ? (
@@ -100,9 +111,9 @@ export async function TasksTab({
               <Field label="Assignee">
                 <select name="assigneeId" defaultValue="">
                   <option value="">Unassigned</option>
-                  {members.map((m) => (
+                  {assignable.map((m) => (
                     <option key={m.userId} value={m.userId}>
-                      {m.user.name}
+                      {m.name}
                     </option>
                   ))}
                 </select>
@@ -205,7 +216,7 @@ export async function TasksTab({
             return (
               <div
                 key={col.status}
-                className="flex flex-col gap-2.5 border-t-2 bg-sand/50 p-3"
+                className="flex flex-col gap-2.5 rounded-[12px] border-t-2 bg-sand/50 p-3"
                 style={{ borderTopColor: fg }}
               >
                 <div className="flex items-center justify-between">
@@ -235,7 +246,7 @@ export async function TasksTab({
                   const moves = canMove ? transitionsFor(t.status, access.canManage) : [];
 
                   return (
-                    <Card key={t.id} className={`flex flex-col gap-2 p-3.5 ${mine ? "border-l-2 border-brick" : ""}`}>
+                    <Card key={t.id} className={`flex flex-col gap-2 rounded-[10px] p-3.5 transition-shadow hover:shadow-sm ${mine ? "border-l-2 border-brick" : ""}`}>
                       <div className="text-[13.5px] font-semibold leading-[1.35]">{t.title}</div>
                       {t.description ? (
                         <div className="text-[12.5px] leading-[1.45] text-ink-4">{t.description}</div>
@@ -268,40 +279,56 @@ export async function TasksTab({
                       </div>
 
                       <div className="flex items-center gap-2 border-t border-line-soft pt-2">
-                        {t.assignee ? (
+                        {access.canManage ? (
                           <>
-                            <Avatar name={t.assignee.name} color={t.assignee.avatarColor} src={avatarSrc(t.assignee)} size={22} />
-                            <span className="text-[11.5px] text-ink-4">
-                              {mine ? "You" : t.assignee.name}
-                            </span>
+                            {t.assignee ? (
+                              <Avatar
+                                name={t.assignee.name}
+                                color={t.assignee.avatarColor}
+                                src={avatarSrc(t.assignee)}
+                                size={22}
+                              />
+                            ) : null}
+                            <AssigneePicker taskId={t.id} currentId={t.assigneeId} people={assignable} />
                           </>
                         ) : (
-                          <span className="text-[11.5px] text-muted">Unassigned</span>
+                          <>
+                            {t.assignee ? (
+                              <>
+                                <Avatar name={t.assignee.name} color={t.assignee.avatarColor} src={avatarSrc(t.assignee)} size={22} />
+                                <span className="text-[11.5px] text-ink-4">
+                                  {mine ? "You" : t.assignee.name}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[11.5px] text-muted">Unassigned</span>
+                            )}
+                            <div className="flex-1" />
+                            {access.isMember && !t.assignee && t.status === "OPEN" ? (
+                              <form action={claimTaskAction}>
+                                <input type="hidden" name="taskId" value={t.id} />
+                                <button
+                                  type="submit"
+                                  className="cursor-pointer border-none bg-transparent p-0 text-[11.5px] font-semibold text-brick"
+                                >
+                                  Claim
+                                </button>
+                              </form>
+                            ) : null}
+                            {mine && t.status !== "DONE" ? (
+                              <form action={claimTaskAction}>
+                                <input type="hidden" name="taskId" value={t.id} />
+                                <button
+                                  type="submit"
+                                  className="cursor-pointer border-none bg-transparent p-0 text-[11.5px] text-muted hover:text-brick"
+                                  title="Release this task back to the board"
+                                >
+                                  Release
+                                </button>
+                              </form>
+                            ) : null}
+                          </>
                         )}
-                        <div className="flex-1" />
-                        {access.isMember && !t.assignee && t.status === "OPEN" ? (
-                          <form action={claimTaskAction}>
-                            <input type="hidden" name="taskId" value={t.id} />
-                            <button
-                              type="submit"
-                              className="cursor-pointer border-none bg-transparent p-0 text-[11.5px] font-semibold text-brick"
-                            >
-                              Claim
-                            </button>
-                          </form>
-                        ) : null}
-                        {mine && t.status !== "DONE" ? (
-                          <form action={claimTaskAction}>
-                            <input type="hidden" name="taskId" value={t.id} />
-                            <button
-                              type="submit"
-                              className="cursor-pointer border-none bg-transparent p-0 text-[11.5px] text-muted hover:text-brick"
-                              title="Release this task back to the board"
-                            >
-                              Release
-                            </button>
-                          </form>
-                        ) : null}
                       </div>
 
                       {moves.length || canDelete ? (
