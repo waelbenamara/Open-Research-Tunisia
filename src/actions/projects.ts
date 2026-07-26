@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
+import { newApplicationEmail } from "@/lib/applicationEmail";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getProjectAccess, canCreateProject } from "@/lib/permissions";
@@ -380,6 +381,35 @@ export async function applyAction(_prev: ActionState, formData: FormData): Promi
     body: `${user.name} applied for ${data.roleApplied}.`,
     link: `/projects/${project.slug}?tab=applications`,
   });
+
+  // Email the lead too — an application they never see is a dead end.
+  // Best-effort: a mail failure must never fail the submission.
+  try {
+    const lead = await db.user.findUnique({
+      where: { id: project.leadId },
+      select: { name: true, email: true, emailUpdates: true },
+    });
+    if (lead?.email && lead.emailUpdates !== false && project.leadId !== user.id) {
+      const h = await headers();
+      const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+      await sendEmail(
+        newApplicationEmail({
+          to: lead.email,
+          leadName: lead.name,
+          applicantName: user.name,
+          projectTitle: project.title,
+          projectSlug: project.slug,
+          role: data.roleApplied,
+          motivation,
+          skills,
+          availability,
+          origin,
+        }),
+      );
+    }
+  } catch (e) {
+    console.error("new-application email failed:", e);
+  }
 
   revalidatePath(`/projects/${project.slug}`);
   return { success: "Application sent." };
