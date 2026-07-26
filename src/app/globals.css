@@ -118,8 +118,38 @@
   0%, 60%, 100% { opacity: 0.25; }
   30% { opacity: 1; }
 }
+
+/* A message bubble easing into place. */
+@keyframes msgPop {
+  from { opacity: 0; transform: translateY(7px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.animate-msg-pop { animation: msgPop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* A soft expanding ring around an online dot. */
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 var(--color-olive); opacity: 0.5; }
+  70% { box-shadow: 0 0 0 7px transparent; opacity: 0; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 0; }
+}
+.pulse-online::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  animation: pulseRing 2.2s ease-out infinite;
+}
+
+/* Emoji picker popover. */
+@keyframes popoverUp {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.animate-popover { animation: popoverUp 0.16s ease both; }
+
 @media (prefers-reduced-motion: reduce) {
   [style*="typingBlink"] { animation: none !important; opacity: 0.6 !important; }
+  .animate-msg-pop, .pulse-online::after, .animate-popover { animation: none !important; }
 }
 
 /* ── Native controls, styled to the paper palette ──────────────────────────

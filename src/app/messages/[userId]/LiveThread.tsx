@@ -26,6 +26,13 @@ type Other = {
 
 const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp"]);
 
+// A small curated palette — enough to be fun, not a full keyboard.
+const EMOJIS = [
+  "😀", "😂", "🙂", "😍", "😎", "🤔", "😅", "🥳",
+  "😭", "😡", "🙏", "👍", "👎", "👏", "🙌", "💪",
+  "🔥", "✨", "🎉", "💯", "❤️", "🚀", "✅", "👀",
+];
+
 export function LiveThread({
   meId,
   other,
@@ -47,6 +54,7 @@ export function LiveThread({
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showEmoji, setShowEmoji] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -119,6 +127,24 @@ export function LiveThread({
   function addFiles(list: FileList | null) {
     if (!list) return;
     setPending((prev) => [...prev, ...Array.from(list)].slice(0, 10));
+  }
+
+  // Insert an emoji at the cursor (falls back to appending).
+  function insertEmoji(emoji: string) {
+    const ta = taRef.current;
+    if (!ta) {
+      setValue((v) => v + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    setValue(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
   }
 
   function send() {
@@ -201,18 +227,23 @@ export function LiveThread({
     <div className="flex flex-col">
       <div className="mb-2 flex items-center gap-2 text-[12.5px]">
         <span
-          className={`inline-block h-[8px] w-[8px] rounded-full ${online ? "bg-olive" : "bg-line-strong"}`}
-          style={online ? { boxShadow: "0 0 0 3px var(--color-olive-tint)" } : undefined}
+          className={`relative inline-block h-[8px] w-[8px] rounded-full ${
+            online ? "bg-olive pulse-online" : "bg-line-strong"
+          }`}
           aria-hidden
         />
         <span className={online ? "font-semibold text-olive" : "text-muted"}>
-          {online ? "Online" : fmtLastSeen(lastSeenAt)}
+          {online ? "Active now" : fmtLastSeen(lastSeenAt)}
         </span>
       </div>
 
       <div
         ref={scrollRef}
-        className="flex max-h-[56vh] min-h-[280px] flex-col gap-1.5 overflow-y-auto border border-line bg-sand/40 p-4"
+        className="flex max-h-[56vh] min-h-[280px] flex-col gap-1.5 overflow-y-auto rounded-[14px] border border-line p-4"
+        style={{
+          background:
+            "radial-gradient(var(--color-line-soft) 1px, transparent 1px) 0 0 / 20px 20px, linear-gradient(180deg, var(--color-card), var(--color-sand))",
+        }}
       >
         {messages.length === 0 ? (
           <p className="py-10 text-center text-[13.5px] text-muted">No messages yet — say hello.</p>
@@ -226,8 +257,10 @@ export function LiveThread({
             return (
               <div key={m.id}>
                 {showDay ? (
-                  <div className="my-3 text-center text-[11px] uppercase tracking-[0.1em] text-muted">
-                    {dayLabel(m.createdAt)}
+                  <div className="my-3 flex justify-center">
+                    <span className="rounded-full border border-line bg-card/80 px-3 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted backdrop-blur-sm">
+                      {dayLabel(m.createdAt)}
+                    </span>
                   </div>
                 ) : null}
                 <div className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
@@ -241,17 +274,26 @@ export function LiveThread({
                   <div className={`flex max-w-[76%] flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
                     {m.body ? (
                       <div
-                        className={`px-3.5 py-2 text-[14px] leading-[1.5] ${
-                          mine ? "bg-brick" : "border border-line bg-card text-ink-2"
+                        className={`animate-msg-pop px-3.5 py-2 text-[14px] leading-[1.5] shadow-sm ${
+                          mine
+                            ? "rounded-[16px] rounded-br-[5px]"
+                            : "rounded-[16px] rounded-bl-[5px] border border-line bg-card text-ink-2"
                         }`}
-                        style={mine ? { color: "#faf8f3" } : undefined}
+                        style={
+                          mine
+                            ? {
+                                color: "#faf8f3",
+                                background: "linear-gradient(135deg, #9a3b2b, #69241a)",
+                              }
+                            : undefined
+                        }
                         title={dateTime(m.createdAt)}
                       >
                         <span className="whitespace-pre-wrap break-words">{m.body}</span>
                       </div>
                     ) : null}
                     {m.pendingFiles ? (
-                      <div className="border border-dashed border-line-strong bg-card px-3 py-2 text-[12.5px] text-muted">
+                      <div className="animate-msg-pop rounded-[14px] border border-dashed border-line-strong bg-card px-3 py-2 text-[12.5px] text-muted">
                         Uploading {m.pendingFiles} file{m.pendingFiles === 1 ? "" : "s"}…
                       </div>
                     ) : null}
@@ -270,7 +312,7 @@ export function LiveThread({
             <div className="w-[26px] shrink-0">
               <Avatar name={other.name} color={other.avatarColor} src={other.avatarSrc} size={26} />
             </div>
-            <div className="flex items-center gap-1 border border-line bg-card px-3 py-2.5">
+            <div className="animate-msg-pop flex items-center gap-1 rounded-[16px] rounded-bl-[5px] border border-line bg-card px-3.5 py-3 shadow-sm">
               <Dot /> <Dot delay={0.15} /> <Dot delay={0.3} />
             </div>
           </div>
@@ -278,9 +320,13 @@ export function LiveThread({
       </div>
 
       {myLastSeen ? (
-        <div className="mt-1 text-right text-[11.5px] text-muted">Seen</div>
+        <div className="mt-1 flex items-center justify-end gap-1 text-[11.5px] font-medium text-olive">
+          <CheckCheck /> Seen
+        </div>
       ) : myLast && !myLast.id.startsWith("temp-") ? (
-        <div className="mt-1 text-right text-[11.5px] text-muted">Delivered</div>
+        <div className="mt-1 flex items-center justify-end gap-1 text-[11.5px] text-muted">
+          <CheckCheck /> Delivered
+        </div>
       ) : null}
 
       {/* Composer */}
@@ -296,7 +342,7 @@ export function LiveThread({
               {pending.map((f, idx) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-2 border border-line bg-tint px-2.5 py-1 text-[12px]"
+                  className="inline-flex items-center gap-2 rounded-full border border-line bg-tint px-2.5 py-1 text-[12px]"
                 >
                   <ClipIcon />
                   <span className="max-w-[180px] truncate">{f.name}</span>
@@ -304,7 +350,7 @@ export function LiveThread({
                   <button
                     type="button"
                     aria-label={`Remove ${f.name}`}
-                    className="text-muted hover:text-brick"
+                    className="grid h-[16px] w-[16px] place-items-center rounded-full text-muted hover:bg-brick hover:text-paper"
                     onClick={() => setPending((prev) => prev.filter((_, j) => j !== idx))}
                   >
                     ×
@@ -314,50 +360,85 @@ export function LiveThread({
             </div>
           ) : null}
 
-          <div className="flex items-end gap-0 border border-line-input bg-card focus-within:border-brick">
-            <button
-              type="button"
-              aria-label="Attach files"
-              onClick={() => fileRef.current?.click()}
-              className="grid h-[44px] w-[44px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-ink-4 hover:text-brick"
-            >
-              <ClipIcon size={18} />
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              hidden
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-            <textarea
-              ref={taRef}
-              value={value}
-              onChange={(e) => onType(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              rows={1}
-              placeholder="Write a message…"
-              aria-label="Write a message"
-              className="!m-0 max-h-[160px] flex-1 resize-none !border-none !bg-transparent !py-3 !px-0 !shadow-none focus:!shadow-none"
-              style={{ outline: "none" }}
-            />
-            <button
-              type="button"
-              onClick={send}
-              disabled={sending || (!value.trim() && pending.length === 0)}
-              className="m-1.5 shrink-0 cursor-pointer self-end border-none bg-brick px-5 py-2 text-[13px] font-semibold disabled:opacity-40"
-              style={{ color: "#faf8f3" }}
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
+          <div className="relative">
+            {showEmoji ? (
+              <>
+                {/* Click-away layer. */}
+                <div className="fixed inset-0 z-10" onClick={() => setShowEmoji(false)} />
+                <div className="animate-popover absolute bottom-[52px] left-0 z-20 grid w-[264px] grid-cols-8 gap-0.5 rounded-[14px] border border-line bg-card p-2 shadow-lg">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => {
+                        insertEmoji(e);
+                        setShowEmoji(false);
+                      }}
+                      className="grid h-8 w-8 cursor-pointer place-items-center rounded-md border-none bg-transparent text-[18px] hover:bg-tint"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            <div className="flex items-end gap-0 rounded-[22px] border border-line-input bg-card px-1 transition-colors focus-within:border-brick focus-within:shadow-[0_0_0_3px_var(--color-brick-tint)]">
+              <button
+                type="button"
+                aria-label="Add emoji"
+                onClick={() => setShowEmoji((v) => !v)}
+                className={`grid h-[44px] w-[40px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-[18px] transition-transform hover:scale-110 ${
+                  showEmoji ? "opacity-100" : "opacity-80 hover:opacity-100"
+                }`}
+              >
+                😊
+              </button>
+              <button
+                type="button"
+                aria-label="Attach files"
+                onClick={() => fileRef.current?.click()}
+                className="grid h-[44px] w-[36px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-ink-4 transition-transform hover:scale-110 hover:text-brick"
+              >
+                <ClipIcon size={18} />
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <textarea
+                ref={taRef}
+                value={value}
+                onChange={(e) => onType(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+                rows={1}
+                placeholder="Write a message…"
+                aria-label="Write a message"
+                className="!m-0 max-h-[160px] flex-1 resize-none !border-none !bg-transparent !py-3 !px-1 !shadow-none focus:!shadow-none"
+                style={{ outline: "none" }}
+              />
+              <button
+                type="button"
+                onClick={send}
+                disabled={sending || (!value.trim() && pending.length === 0)}
+                aria-label="Send message"
+                className="m-1.5 grid h-[38px] w-[38px] shrink-0 cursor-pointer place-items-center self-end rounded-full border-none transition-transform hover:enabled:scale-105 active:enabled:scale-95 disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg, #9a3b2b, #69241a)", color: "#faf8f3" }}
+              >
+                {sending ? <Spinner /> : <PaperPlane />}
+              </button>
+            </div>
           </div>
 
           {progress !== null ? (
@@ -383,7 +464,7 @@ function Attachment({ att, mine }: { att: Att; mine: boolean }) {
         <img
           src={href}
           alt={att.filename}
-          className="max-h-[220px] max-w-[240px] border border-line object-cover"
+          className="max-h-[220px] max-w-[240px] rounded-[14px] border border-line object-cover shadow-sm"
         />
       </a>
     );
@@ -393,7 +474,7 @@ function Attachment({ att, mine }: { att: Att; mine: boolean }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex max-w-[260px] items-center gap-2.5 px-3 py-2 no-underline ${
+      className={`inline-flex max-w-[260px] items-center gap-2.5 rounded-[14px] px-3 py-2 no-underline shadow-sm ${
         mine ? "bg-brick-dark text-paper" : "border border-line bg-card text-ink-2"
       }`}
       style={mine ? { color: "#faf8f3" } : undefined}
@@ -469,6 +550,38 @@ function FileIcon() {
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function PaperPlane() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 12L20 4l-4.5 16-3.8-6.2L4 12z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden className="animate-spin">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.4" strokeOpacity="0.3" />
+      <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CheckCheck() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+      <path d="M1.5 12.5l4 4 8-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 16.5l1 1 8-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

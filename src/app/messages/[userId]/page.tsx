@@ -86,7 +86,15 @@ export default async function ThreadPage({
 
       <div className="mx-auto flex max-w-[720px] flex-col">
         <div className="mb-4 flex items-center gap-3 border-b border-line pb-4">
-          <Avatar name={other.name} color={other.avatarColor} src={avatarSrc(other)} size={44} />
+          <div className="relative flex-none">
+            <Avatar name={other.name} color={other.avatarColor} src={avatarSrc(other)} size={44} />
+            {isOnline(other.lastSeenAt) ? (
+              <span
+                className="pulse-online absolute bottom-0 right-0 h-[12px] w-[12px] rounded-full border-2 border-paper bg-olive"
+                aria-label="Online"
+              />
+            ) : null}
+          </div>
           <div className="flex-1">
             <Link
               href={`/people/${other.id}`}
