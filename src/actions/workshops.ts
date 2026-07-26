@@ -153,6 +153,64 @@ export async function createWorkshopAction(
   redirect(`/workshops/${workshop.slug}`);
 }
 
+const WORKSHOP_STATUSES = ["OPEN", "RUNNING", "COMPLETED", "DRAFT"];
+const LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const FORMATS = ["ONLINE", "IN_PERSON", "HYBRID"];
+
+/** Edit a workshop's core details. Facilitator or admin only. Sessions are
+ *  managed separately on the workshop page. */
+export async function updateWorkshopAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const workshopId = String(formData.get("workshopId"));
+  const { user, workshop } = await assertFacilitator(workshopId);
+
+  const title = String(formData.get("title") || "").trim();
+  const summary = String(formData.get("summary") || "").trim();
+  if (title.length < 6) return { error: "Give the workshop a title (at least 6 characters)." };
+  if (summary.length < 30) return { error: "Write a one-paragraph summary (at least 30 characters)." };
+
+  const startRaw = String(formData.get("startDate") || "");
+  const start = startRaw ? new Date(startRaw) : null;
+  const level = LEVELS.includes(String(formData.get("level"))) ? String(formData.get("level")) : "Beginner";
+  const format = FORMATS.includes(String(formData.get("format"))) ? String(formData.get("format")) : "ONLINE";
+  const status = WORKSHOP_STATUSES.includes(String(formData.get("status")))
+    ? String(formData.get("status"))
+    : "OPEN";
+  const seats = Math.min(Math.max(Number(formData.get("seats")) || 30, 1), 1000);
+  const threshold = Math.min(Math.max(Number(formData.get("attendanceThreshold")) || 75, 0), 100);
+  const outcomes = String(formData.get("outcomes") || "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+
+  await db.workshop.update({
+    where: { id: workshopId },
+    data: {
+      title,
+      summary,
+      about: String(formData.get("about") || "").trim(),
+      level,
+      outcomes: JSON.stringify(outcomes),
+      prerequisites: String(formData.get("prerequisites") || "").trim(),
+      format,
+      location: format === "ONLINE" ? null : String(formData.get("location") || "").trim() || null,
+      language: String(formData.get("language") || "English"),
+      seats,
+      attendanceThreshold: threshold,
+      certificateEnabled: formData.get("certificateEnabled") !== null,
+      status,
+      ...(start && !isNaN(start.getTime()) ? { startDate: start } : {}),
+    },
+  });
+
+  await audit(user.id, "WORKSHOP_UPDATE", "Workshop", workshopId, title);
+  revalidatePath(`/workshops/${workshop.slug}`);
+  return { success: "Workshop updated." };
+}
+
 /* ── Enrolment ──────────────────────────────────────────── */
 
 export async function enrollAction(formData: FormData) {

@@ -6,6 +6,7 @@ import { canManageWorkshop } from "@/lib/permissions";
 import { avatarSrc, dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
+import { updateSessionAction } from "@/actions/workshops";
 import { RESOURCE_KINDS } from "@/lib/enums";
 import {
   Avatar,
@@ -157,10 +158,16 @@ export default async function WorkshopPage({
                 <>
                   <div className="flex-1" />
                   <Link
+                    href={`/workshops/${workshop.slug}/edit`}
+                    className="border border-line-input bg-card px-4 py-2 text-[12.5px] font-semibold text-ink-4 no-underline hover:border-brick hover:text-brick hover:no-underline"
+                  >
+                    Edit workshop
+                  </Link>
+                  <Link
                     href={`/workshops/${workshop.slug}?tab=roster`}
                     className="border border-line-input bg-card px-4 py-2 text-[12.5px] font-semibold text-ink-4 no-underline hover:border-brick hover:text-brick hover:no-underline"
                   >
-                    Manage
+                    Roster
                   </Link>
                 </>
               ) : null}
@@ -293,6 +300,43 @@ export default async function WorkshopPage({
                                 </span>
                               ) : null}
                             </div>
+                          ) : null}
+
+                          {canManage ? (
+                            <form
+                              action={updateSessionAction}
+                              className="flex flex-wrap items-end gap-2 border-t border-line-soft pt-2.5"
+                            >
+                              <input type="hidden" name="sessionId" value={s.id} />
+                              <div className="min-w-[160px] flex-1">
+                                <label className="!mb-1 !text-[11.5px] !text-muted">
+                                  Live meeting link
+                                </label>
+                                <input
+                                  name="meetingUrl"
+                                  defaultValue={s.meetingUrl ?? ""}
+                                  placeholder="https://meet…"
+                                  className="!py-1.5 !text-[13px]"
+                                />
+                              </div>
+                              <div className="min-w-[160px] flex-1">
+                                <label className="!mb-1 !text-[11.5px] !text-muted">
+                                  Recording link
+                                </label>
+                                <input
+                                  name="recordingUrl"
+                                  defaultValue={s.recordingUrl ?? ""}
+                                  placeholder="https://…"
+                                  className="!py-1.5 !text-[13px]"
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                className="mb-[1px] cursor-pointer border border-line-input bg-card px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-4 hover:border-brick hover:text-brick"
+                              >
+                                Save links
+                              </button>
+                            </form>
                           ) : null}
                         </Card>
                       );
@@ -437,7 +481,13 @@ export default async function WorkshopPage({
           {tab === "roster" && canManage ? (
             <RosterTab
               workshopId={workshop.id}
-              sessions={workshop.sessions.map((s) => ({ id: s.id, index: s.index, title: s.title }))}
+              sessions={workshop.sessions.map((s) => ({
+                id: s.id,
+                index: s.index,
+                title: s.title,
+                meetingUrl: s.meetingUrl,
+                recordingUrl: s.recordingUrl,
+              }))}
               threshold={workshop.attendanceThreshold}
             />
           ) : null}

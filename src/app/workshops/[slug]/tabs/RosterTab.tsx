@@ -6,7 +6,13 @@ import { issueCertificatesAction, markAttendanceAction, updateSessionAction } fr
 import { Avatar, Card, EmptyState, Pill, SectionLabel } from "@/components/ui";
 import { Details } from "@/components/Collapse";
 
-type SessionRef = { id: string; index: number; title: string };
+type SessionRef = {
+  id: string;
+  index: number;
+  title: string;
+  meetingUrl: string | null;
+  recordingUrl: string | null;
+};
 
 export async function RosterTab({
   workshopId,
@@ -93,11 +99,21 @@ export async function RosterTab({
                 <input type="hidden" name="sessionId" value={s.id} />
                 <div className="min-w-[180px] flex-1">
                   <label className="!text-[12px]">Live meeting link</label>
-                  <input name="meetingUrl" placeholder="https://meet…" className="!py-1.5 !text-[13px]" />
+                  <input
+                    name="meetingUrl"
+                    defaultValue={s.meetingUrl ?? ""}
+                    placeholder="https://meet…"
+                    className="!py-1.5 !text-[13px]"
+                  />
                 </div>
                 <div className="min-w-[180px] flex-1">
                   <label className="!text-[12px]">Recording link</label>
-                  <input name="recordingUrl" placeholder="https://…" className="!py-1.5 !text-[13px]" />
+                  <input
+                    name="recordingUrl"
+                    defaultValue={s.recordingUrl ?? ""}
+                    placeholder="https://…"
+                    className="!py-1.5 !text-[13px]"
+                  />
                 </div>
                 <button
                   type="submit"
