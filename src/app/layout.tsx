@@ -3,6 +3,8 @@ import { Newsreader, Public_Sans } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { Presence } from "@/components/Presence";
+import { getCurrentUser } from "@/lib/auth";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -28,10 +30,12 @@ export const metadata: Metadata = {
     "Join real research projects as a contributor — no title required. Learn the craft through hands-on workshops and help publish research that matters.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
   return (
     <html lang="en" className={`${newsreader.variable} ${publicSans.variable}`}>
       <body className="flex min-h-screen flex-col">
+        {user ? <Presence /> : null}
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />

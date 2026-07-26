@@ -55,6 +55,11 @@ model User {
   emailUpdates    Boolean   @default(true)
   /// When the last activity digest was sent, for per-user throttling.
   lastDigestAt    DateTime?
+  /// Presence for chat: heartbeat timestamp → "online" / "last seen".
+  lastSeenAt      DateTime?
+  /// Ephemeral typing signal: who this user is currently typing to, and when.
+  typingToId      String?
+  typingAt        DateTime?
   suspended       Boolean   @default(false)
   cocAcceptedAt   DateTime?
   createdAt       DateTime  @default(now())

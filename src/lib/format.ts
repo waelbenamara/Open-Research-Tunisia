@@ -1,3 +1,26 @@
+/** Someone counts as online if their heartbeat landed within this window. */
+export const ONLINE_WINDOW_MS = 75_000;
+
+export function isOnline(lastSeenAt: Date | string | null | undefined): boolean {
+  if (!lastSeenAt) return false;
+  return Date.now() - new Date(lastSeenAt).getTime() < ONLINE_WINDOW_MS;
+}
+
+/** "last seen 5 min ago" / "last seen yesterday" — for chat presence. */
+export function lastSeen(at: Date | string | null | undefined): string {
+  if (!at) return "offline";
+  const d = new Date(at);
+  const mins = Math.floor((Date.now() - d.getTime()) / 60_000);
+  if (mins < 1) return "last seen just now";
+  if (mins < 60) return `last seen ${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `last seen ${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "last seen yesterday";
+  if (days < 7) return `last seen ${days} days ago`;
+  return `last seen ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+}
+
 /** Extension of a stored file key like "supabase:ab12.pdf" or a filename. */
 export function fileExt(pathOrName: string | null | undefined): string {
   return (pathOrName ?? "").split(".").pop()?.toLowerCase() ?? "";

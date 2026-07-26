@@ -114,6 +114,14 @@
   }
 }
 
+@keyframes typingBlink {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="typingBlink"] { animation: none !important; opacity: 0.6 !important; }
+}
+
 /* ── Native controls, styled to the paper palette ──────────────────────────
    The selector must catch `<input>` with NO type attribute — most inputs in
    the codebase are written that way, and `input[type="text"]` does not match

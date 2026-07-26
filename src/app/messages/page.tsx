@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { avatarSrc, relativeTime } from "@/lib/format";
+import { avatarSrc, isOnline, relativeTime } from "@/lib/format";
 import { Avatar, EmptyState, Shell } from "@/components/ui";
 import { NewMessage } from "./NewMessage";
 
@@ -15,6 +15,7 @@ type Partner = {
   avatarUrl: string | null;
   avatarPath: string | null;
   headline: string | null;
+  lastSeenAt: Date | null;
 };
 
 export default async function MessagesPage() {
@@ -81,12 +82,20 @@ export default async function MessagesPage() {
               href={`/messages/${c.partner.id}`}
               className="flex items-center gap-4 border-b border-line-soft px-2 py-4 no-underline transition-colors hover:bg-tint hover:no-underline"
             >
-              <Avatar
-                name={c.partner.name}
-                color={c.partner.avatarColor}
-                src={avatarSrc(c.partner)}
-                size={44}
-              />
+              <div className="relative flex-none">
+                <Avatar
+                  name={c.partner.name}
+                  color={c.partner.avatarColor}
+                  src={avatarSrc(c.partner)}
+                  size={44}
+                />
+                {isOnline(c.partner.lastSeenAt) ? (
+                  <span
+                    className="absolute bottom-0 right-0 h-[11px] w-[11px] rounded-full border-2 border-paper bg-olive"
+                    aria-label="Online"
+                  />
+                ) : null}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <span className="text-[14.5px] font-semibold text-ink">{c.partner.name}</span>
@@ -121,4 +130,5 @@ const partnerSelect = {
   avatarUrl: true,
   avatarPath: true,
   headline: true,
+  lastSeenAt: true,
 } as const;
