@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canManageWorkshop } from "@/lib/permissions";
-import { dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
+import { avatarSrc, dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
 import { RESOURCE_KINDS } from "@/lib/enums";
@@ -103,11 +103,13 @@ export default async function WorkshopPage({
   ];
   if (canManage) tabs.push(["roster", `Roster (${taken})`]);
 
+  const isOverview = tab === "overview";
+
   return (
     <Shell className="pb-24 pt-7">
       <Breadcrumb href="/" label="Discover" current="Workshop" />
 
-      <div className="grid items-start gap-12 lg:grid-cols-[1fr_340px]">
+      <div className={`grid items-start gap-10 ${isOverview ? "lg:grid-cols-[1fr_340px]" : "grid-cols-1"}`}>
         <div className="flex min-w-0 flex-col gap-8">
           <div>
             <div className="mb-4 flex flex-wrap items-center gap-2.5">
@@ -136,6 +138,7 @@ export default async function WorkshopPage({
               <Avatar
                 name={workshop.facilitator.name}
                 color={workshop.facilitator.avatarColor}
+                src={avatarSrc(workshop.facilitator)}
                 size={38}
               />
               <div>
@@ -440,6 +443,7 @@ export default async function WorkshopPage({
           ) : null}
         </div>
 
+        {isOverview ? (
         <aside className="flex flex-col gap-4.5 lg:sticky lg:top-[88px]">
           <EnrollPanel
             workshopId={workshop.id}
@@ -514,6 +518,7 @@ export default async function WorkshopPage({
             </Card>
           ) : null}
         </aside>
+        ) : null}
       </div>
     </Shell>
   );
