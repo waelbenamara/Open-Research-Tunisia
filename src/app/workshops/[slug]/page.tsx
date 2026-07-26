@@ -337,7 +337,7 @@ export default async function WorkshopPage({
                                 id: s.id,
                                 title: s.title,
                                 description: s.description,
-                                scheduledAtInput: s.scheduledAt.toISOString().slice(0, 16),
+                                scheduledAtISO: s.scheduledAt.toISOString(),
                                 durationMin: s.durationMin,
                                 meetingUrl: s.meetingUrl,
                                 recordingUrl: s.recordingUrl,

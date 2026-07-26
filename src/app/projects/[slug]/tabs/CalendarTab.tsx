@@ -3,6 +3,7 @@ import { EVENT_KINDS } from "@/lib/enums";
 import { addProjectEventAction } from "@/actions/projects";
 import { Field } from "@/components/ui";
 import { Details } from "@/components/Collapse";
+import { LocalDateTimeInput } from "@/components/LocalDateTimeInput";
 import type { ProjectAccess } from "@/lib/permissions";
 import { CalendarView, type CalItem } from "./CalendarView";
 
@@ -85,11 +86,11 @@ export async function CalendarTab({
               </Field>
             </div>
             <div className="grid gap-3.5 sm:grid-cols-2">
-              <Field label="When">
-                <input name="startAt" type="datetime-local" required />
+              <Field label="When" hint="your local time">
+                <LocalDateTimeInput name="startAt" required />
               </Field>
               <Field label="Ends" hint="optional">
-                <input name="endAt" type="datetime-local" />
+                <LocalDateTimeInput name="endAt" />
               </Field>
             </div>
             <Field label="Note" hint="optional">

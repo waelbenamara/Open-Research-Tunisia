@@ -381,14 +381,19 @@ export async function dropEnrollmentAction(formData: FormData) {
 
 /* ── Sessions ───────────────────────────────────────────── */
 
-export async function addSessionAction(formData: FormData) {
+export async function addSessionAction(
+  _prev: SessionSaveState,
+  formData: FormData,
+): Promise<SessionSaveState> {
   const workshopId = String(formData.get("workshopId"));
   const { user, workshop } = await assertFacilitator(workshopId);
 
   const count = await db.workshopSession.count({ where: { workshopId } });
-  const scheduledAt = String(formData.get("scheduledAt") || "");
+  const scheduledAtRaw = String(formData.get("scheduledAt") || "");
+  const parsed = scheduledAtRaw ? new Date(scheduledAtRaw) : null;
+  const scheduledAt = parsed && !isNaN(parsed.getTime()) ? parsed : new Date();
   const title = String(formData.get("title") || "").trim();
-  if (!title) return;
+  if (!title) return { ok: false, message: "Give the session a title." };
 
   await db.workshopSession.create({
     data: {
@@ -396,7 +401,7 @@ export async function addSessionAction(formData: FormData) {
       index: count + 1,
       title,
       description: String(formData.get("description") || "").trim(),
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : new Date(),
+      scheduledAt,
       durationMin: Number(formData.get("durationMin") || 90) || 90,
       meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
     },
@@ -412,72 +417,53 @@ export async function addSessionAction(formData: FormData) {
     {
       type: "SESSION",
       title: `New session scheduled — ${workshop.title}`,
-      body: `${title}${scheduledAt ? ` · ${new Date(scheduledAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}` : ""}`,
+      body: `${title} · ${scheduledAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC`,
       link: `/workshops/${workshop.slug}`,
     },
   );
   revalidatePath(`/workshops/${workshop.slug}`);
+
+  return {
+    ok: true,
+    message: `Session added — ${title} on ${scheduledAt.toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    })} UTC.`,
+  };
 }
 
-export async function updateSessionAction(formData: FormData) {
-  const sessionId = String(formData.get("sessionId"));
-  const session = await db.workshopSession.findUnique({
-    where: { id: sessionId },
-    include: { workshop: { select: { id: true, slug: true } } },
-  });
-  if (!session) return;
-  const { user, workshop } = await assertFacilitator(session.workshop.id);
+/** Full edit of a session — title, time, duration, description, and links.
+ *  Uses the useActionState signature so the form can show inline feedback. */
+export type SessionSaveState = { ok: boolean; message: string } | null;
 
-  const recordingUrl = String(formData.get("recordingUrl") || "").trim() || null;
-  await db.workshopSession.update({
-    where: { id: sessionId },
-    data: {
-      recordingUrl,
-      meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
-    },
-  });
-  await audit(user.id, "SESSION_UPDATE", "WorkshopSession", sessionId, session.title);
-
-  // A newly posted recording is the thing people who missed the session wait for.
-  if (recordingUrl && !session.recordingUrl) {
-    const enrolled = await db.enrollment.findMany({
-      where: { workshopId: workshop.id, status: { in: ["ENROLLED", "COMPLETED"] } },
-      select: { userId: true },
-    });
-    await notify(
-      enrolled.map((e) => e.userId),
-      {
-        type: "RECORDING",
-        title: `Recording available — ${workshop.title}`,
-        body: session.title,
-        link: `/workshops/${session.workshop.slug}`,
-      },
-    );
-  }
-  revalidatePath(`/workshops/${session.workshop.slug}`);
-}
-
-/** Full edit of a session — title, time, duration, description, and links. */
-export async function editSessionAction(formData: FormData) {
+export async function editSessionAction(
+  _prev: SessionSaveState,
+  formData: FormData,
+): Promise<SessionSaveState> {
   const sessionId = String(formData.get("sessionId"));
   const session = await db.workshopSession.findUnique({
     where: { id: sessionId },
     include: { workshop: { select: { id: true, slug: true, title: true } } },
   });
-  if (!session) return;
+  if (!session) return { ok: false, message: "Session not found." };
   const { user, workshop } = await assertFacilitator(session.workshop.id);
 
   const title = String(formData.get("title") || "").trim();
   const whenRaw = String(formData.get("scheduledAt") || "");
   const when = whenRaw ? new Date(whenRaw) : null;
   const recordingUrl = String(formData.get("recordingUrl") || "").trim() || null;
+  const scheduledAt = when && !isNaN(when.getTime()) ? when : session.scheduledAt;
 
   await db.workshopSession.update({
     where: { id: sessionId },
     data: {
       title: title || session.title,
       description: String(formData.get("description") || "").trim(),
-      scheduledAt: when && !isNaN(when.getTime()) ? when : session.scheduledAt,
+      scheduledAt,
       durationMin: Math.min(Math.max(Number(formData.get("durationMin")) || session.durationMin, 15), 480),
       meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
       recordingUrl,
@@ -503,6 +489,18 @@ export async function editSessionAction(formData: FormData) {
 
   await audit(user.id, "SESSION_UPDATE", "WorkshopSession", sessionId, title || session.title);
   revalidatePath(`/workshops/${session.workshop.slug}`);
+
+  return {
+    ok: true,
+    message: `Saved — ${title || session.title} is set for ${scheduledAt.toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    })} UTC.`,
+  };
 }
 
 export async function deleteSessionAction(formData: FormData) {

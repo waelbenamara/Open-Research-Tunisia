@@ -26,6 +26,14 @@ function plusOneWeek(local: string) {
   return toLocalInput(d);
 }
 
+/** A datetime-local string is naive wall-clock; convert it to a UTC ISO in the
+ *  browser so the server stores the instant the facilitator actually meant. */
+function localToISO(local: string) {
+  if (!local) return "";
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? "" : d.toISOString();
+}
+
 type SessionDraft = { title: string; at: string; durationMin: string };
 
 export function WorkshopForm({ projects }: { projects: { id: string; title: string }[] }) {
@@ -74,7 +82,7 @@ export function WorkshopForm({ projects }: { projects: { id: string; title: stri
           sessions
             .map((s) => ({
               title: s.title.trim(),
-              at: s.at,
+              at: localToISO(s.at),
               durationMin: Number(s.durationMin) || 90,
             }))
             .filter((s) => s.title || s.at),
