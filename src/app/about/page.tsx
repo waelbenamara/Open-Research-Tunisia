@@ -1,22 +1,12 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { Card, StatCard } from "@/components/ui";
+import { Card } from "@/components/ui";
 
 export const metadata = {
   title: "About",
   description: "How Open Research Tunisia works, and why it exists.",
 };
 
-export default async function AboutPage() {
-  const [projects, workshops, members, certificates, outputs, contributions] = await Promise.all([
-    db.project.count({ where: { archived: false } }),
-    db.workshop.count(),
-    db.user.count(),
-    db.certificate.count(),
-    db.output.count(),
-    db.contribution.count(),
-  ]);
-
+export default function AboutPage() {
   return (
     <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
@@ -40,15 +30,6 @@ export default async function AboutPage() {
           same contributor taxonomy journals use — so credit is a matter of record, not of who you
           know.
         </p>
-      </div>
-
-      <div className="mt-11 grid gap-4 sm:grid-cols-3">
-        <StatCard n={projects} label="Research projects" />
-        <StatCard n={workshops} label="Workshops run" />
-        <StatCard n={members} label="Members" />
-        <StatCard n={contributions} label="Logged contributions" />
-        <StatCard n={certificates} label="Certificates issued" />
-        <StatCard n={outputs} label="Outputs produced" />
       </div>
 
       <h2 className="mt-14 font-serif text-[26px] font-medium">How it works</h2>
