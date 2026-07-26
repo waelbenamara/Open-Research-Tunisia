@@ -5,7 +5,9 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Presence } from "@/components/Presence";
 import { Tour } from "@/components/Tour";
+import { BottomNav } from "@/components/BottomNav";
 import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -33,14 +35,25 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
+  const [unread, unreadMsgs] = user
+    ? await Promise.all([
+        db.notification.count({ where: { userId: user.id, read: false } }),
+        db.directMessage.count({ where: { recipientId: user.id, readAt: null } }),
+      ])
+    : [0, 0];
+
   return (
     <html lang="en" className={`${newsreader.variable} ${publicSans.variable}`}>
       <body className="flex min-h-screen flex-col">
         {user ? <Presence /> : null}
         {user ? <Tour /> : null}
         <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+        {/* Extra bottom space on phones so the fixed tab bar never covers content. */}
+        <main className={`flex-1 ${user ? "pb-[68px] md:pb-0" : ""}`}>{children}</main>
+        <div className={user ? "hidden md:block" : ""}>
+          <SiteFooter />
+        </div>
+        {user ? <BottomNav unread={unread} unreadMsgs={unreadMsgs} /> : null}
       </body>
     </html>
   );

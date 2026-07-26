@@ -106,7 +106,7 @@ export default async function ProjectPage({
   const canApply = !access.isMember && project.approvalStatus === "APPROVED" && !project.archived;
 
   return (
-    <div className="mx-auto w-full max-w-[1360px] px-6 pb-24 pt-6 sm:px-8">
+    <div className="mx-auto w-full max-w-[1360px] px-4 pb-24 pt-6 sm:px-8">
       <Breadcrumb href="/" label="Discover" current="Research project" />
 
       {project.approvalStatus === "PENDING" ? (
@@ -185,7 +185,7 @@ export default async function ProjectPage({
       </div>
 
       {/* Sticky tab bar — full width */}
-      <div className="sticky top-[56px] z-30 -mx-6 mb-8 border-b border-line bg-paper/92 px-6 backdrop-blur-[6px] sm:-mx-8 sm:px-8">
+      <div className="sticky top-[56px] z-30 -mx-4 mb-8 border-b border-line bg-paper/92 px-4 backdrop-blur-[6px] sm:-mx-8 sm:px-8">
         <div className="flex gap-1 overflow-x-auto">
           {tabs.map(([key, label]) => {
             const active = tab === key;

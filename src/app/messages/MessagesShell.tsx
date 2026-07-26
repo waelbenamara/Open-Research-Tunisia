@@ -23,7 +23,8 @@ export function MessagesShell({
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-3 sm:px-5">
-      <div className="flex h-[calc(100dvh-118px)] min-h-[440px] overflow-hidden rounded-[18px] border border-line bg-card shadow-[0_10px_40px_-24px_rgba(33,29,22,0.5)]">
+      {/* Shorter on phones to clear the fixed bottom tab bar; full height on md+. */}
+      <div className="flex h-[calc(100dvh-172px)] min-h-[420px] overflow-hidden rounded-[18px] border border-line bg-card shadow-[0_10px_40px_-24px_rgba(33,29,22,0.5)] md:h-[calc(100dvh-118px)]">
         {/* Left rail */}
         <aside
           className={`${

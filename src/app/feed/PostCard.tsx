@@ -89,14 +89,20 @@ export function PostCard({
           />
         </a>
       ) : post.images.length > 1 ? (
-        <div className="mt-3 grid grid-cols-2 gap-1">
+        // Masonry: each photo keeps its own aspect ratio, flowing into 2 columns.
+        <div className="mt-3 columns-2 gap-1 px-0">
           {post.images.map((img, i) => {
             const src = `/api/feed/images/${img.id}`;
-            const spanFull = post.images.length % 2 === 1 && i === post.images.length - 1;
             return (
-              <a key={img.id} href={src} target="_blank" rel="noopener noreferrer" className={spanFull ? "col-span-2" : ""}>
+              <a
+                key={img.id}
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-1 block break-inside-avoid"
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={src} alt={`Photo ${i + 1}`} className="aspect-video w-full object-cover" />
+                <img src={src} alt={`Photo ${i + 1}`} className="block h-auto w-full" />
               </a>
             );
           })}

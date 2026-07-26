@@ -529,7 +529,7 @@ async function AdminAudit() {
       ) : (
         <div className="flex flex-col">
           {logs.map((l) => (
-            <div key={l.id} className="flex items-baseline gap-4 border-b border-line-soft py-2.5">
+            <div key={l.id} className="flex flex-col gap-0.5 border-b border-line-soft py-2.5 sm:flex-row sm:items-baseline sm:gap-4">
               <div className="min-w-[110px] text-[12px] text-muted">{relativeTime(l.createdAt)}</div>
               <div className="min-w-[140px] text-[13px] font-semibold text-ink">
                 {l.actor?.name ?? "System"}
