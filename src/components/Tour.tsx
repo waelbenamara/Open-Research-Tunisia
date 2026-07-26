@@ -37,6 +37,13 @@ const STEPS: Step[] = [
     emoji: "🧭",
   },
   {
+    key: "feed",
+    selector: "feed",
+    title: "Community feed",
+    body: "Share updates, questions, and wins with everyone — attach photos, link a project, and react or comment on what others post.",
+    emoji: "📣",
+  },
+  {
     key: "mywork",
     selector: "mywork",
     title: "My work",

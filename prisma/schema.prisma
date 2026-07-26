@@ -93,6 +93,9 @@ model User {
   sessions         Session[]
   oauthAccounts    OAuthAccount[]
   passwordResets   PasswordResetToken[]
+  posts            Post[]
+  postComments     PostComment[]
+  postReactions    PostReaction[]
 }
 
 /// A social login linked to a user. One user can link both Google and GitHub.
@@ -213,6 +216,7 @@ model Project {
   outputs       Output[]
   bookmarks     Bookmark[]
   events        ProjectEvent[]
+  feedPosts     Post[]
 
   @@index([stage])
   @@index([approvalStatus])
@@ -472,6 +476,7 @@ model Workshop {
   contributions Contribution[]
   bookmarks     Bookmark[]
   supportsProjects Project[] @relation("WorkshopForProject")
+  feedPosts     Post[]
 }
 
 model WorkshopSession {
@@ -600,6 +605,68 @@ model FileBlob {
   createdAt   DateTime @default(now())
 
   attachments MessageAttachment[]
+  postImages  PostImage[]
+}
+
+/// A feed post — the LinkedIn/Facebook-style timeline. Members share updates
+/// (markdown + photos), optionally linking a project or workshop, and others
+/// react and comment.
+model Post {
+  id               String    @id @default(cuid())
+  authorId         String
+  author           User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body             String    @default("")
+  linkedProjectId  String?
+  linkedProject    Project?  @relation(fields: [linkedProjectId], references: [id], onDelete: SetNull)
+  linkedWorkshopId String?
+  linkedWorkshop   Workshop? @relation(fields: [linkedWorkshopId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  editedAt         DateTime?
+  images           PostImage[]
+  comments         PostComment[]
+  reactions        PostReaction[]
+
+  @@index([createdAt])
+  @@index([authorId])
+}
+
+/// A photo on a post, pointing at a deduplicated blob (content-addressed).
+model PostImage {
+  id       String   @id @default(cuid())
+  postId   String
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  blobHash String
+  blob     FileBlob @relation(fields: [blobHash], references: [hash])
+  order    Int      @default(0)
+
+  @@index([postId])
+  @@index([blobHash])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+/// One reaction per user per post; `kind` is like|celebrate|love|insightful|clap.
+model PostReaction {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String   @default("like")
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
 }
 
 /// A file shared inside a conversation, pointing at a deduplicated blob and

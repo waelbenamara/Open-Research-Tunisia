@@ -34,6 +34,15 @@ export async function SiteHeader() {
           >
             Discover
           </Link>
+          {user ? (
+            <Link
+              href="/feed"
+              data-tour="feed"
+              className="text-ink-4 no-underline hover:text-ink hover:no-underline"
+            >
+              Feed
+            </Link>
+          ) : null}
           <Link
             href="/publications"
             className="text-ink-4 no-underline hover:text-ink hover:no-underline"
