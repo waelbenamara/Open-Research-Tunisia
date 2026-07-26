@@ -74,6 +74,8 @@ model User {
   graded           Submission[]      @relation("Grader")
   certificates     Certificate[]
   notifications    Notification[]
+  sentMessages     DirectMessage[]   @relation("DMSender")
+  receivedMessages DirectMessage[]   @relation("DMRecipient")
   auditLogs        AuditLog[]
   bookmarks        Bookmark[]
   sessions         Session[]
@@ -517,6 +519,22 @@ model Certificate {
 }
 
 // ─────────────────────────────────────────────── Cross-cutting
+
+/// A private one-to-one message between two members. A "conversation" is just
+/// all messages between a given pair — there's no conversation table.
+model DirectMessage {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      User      @relation("DMSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User      @relation("DMRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, readAt])
+}
 
 model Notification {
   id        String   @id @default(cuid())

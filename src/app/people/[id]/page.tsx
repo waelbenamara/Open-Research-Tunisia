@@ -21,7 +21,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   return (
     <Shell className="pb-24 pt-7">
       <Breadcrumb href="/people" label="People" current="Profile" />
-      <ProfileView userId={id} isOwner={me?.id === id} />
+      <ProfileView userId={id} isOwner={me?.id === id} viewerId={me?.id ?? null} />
     </Shell>
   );
 }

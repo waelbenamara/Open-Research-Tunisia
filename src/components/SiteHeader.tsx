@@ -7,9 +7,12 @@ import { UserMenu } from "./UserMenu";
 export async function SiteHeader() {
   const user = await getCurrentUser();
 
-  const unread = user
-    ? await db.notification.count({ where: { userId: user.id, read: false } })
-    : 0;
+  const [unread, unreadMsgs] = user
+    ? await Promise.all([
+        db.notification.count({ where: { userId: user.id, read: false } }),
+        db.directMessage.count({ where: { recipientId: user.id, readAt: null } }),
+      ])
+    : [0, 0];
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-[rgba(250,248,243,0.94)] backdrop-blur-[8px]">
@@ -55,6 +58,18 @@ export async function SiteHeader() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            <Link
+              href="/messages"
+              className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"
+              aria-label={`Messages${unreadMsgs ? `, ${unreadMsgs} unread` : ""}`}
+            >
+              Messages
+              {unreadMsgs > 0 ? (
+                <span className="ml-1.5 inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brick px-1 text-[10.5px] font-bold text-paper">
+                  {unreadMsgs > 99 ? "99+" : unreadMsgs}
+                </span>
+              ) : null}
+            </Link>
             <Link
               href="/notifications"
               className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"

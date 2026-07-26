@@ -8,7 +8,15 @@ import { Avatar, Card, EmptyState, Pill, SectionLabel } from "@/components/ui";
  * The public researcher record. This is the thing a contributor can put on a CV:
  * what they did, who credited them, and which credentials verify.
  */
-export async function ProfileView({ userId, isOwner }: { userId: string; isOwner: boolean }) {
+export async function ProfileView({
+  userId,
+  isOwner,
+  viewerId = null,
+}: {
+  userId: string;
+  isOwner: boolean;
+  viewerId?: string | null;
+}) {
   const user = await db.user.findUnique({
     where: { id: userId },
     include: {
@@ -116,7 +124,16 @@ export async function ProfileView({ userId, isOwner }: { userId: string; isOwner
                 GitHub
               </a>
             ) : null}
-            {isOwner ? <Link href="/profile/edit">Edit profile</Link> : null}
+            {isOwner ? (
+              <Link href="/profile/edit">Edit profile</Link>
+            ) : viewerId ? (
+              <Link
+                href={`/messages/${userId}`}
+                className="border border-line-input bg-card px-3.5 py-1 font-semibold text-ink-4 no-underline hover:border-brick hover:text-brick hover:no-underline"
+              >
+                Message
+              </Link>
+            ) : null}
           </div>
         </div>
         <div className="flex gap-7 text-center">
