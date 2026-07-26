@@ -6,8 +6,8 @@ import { canManageWorkshop } from "@/lib/permissions";
 import { avatarSrc, dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
-import { updateSessionAction } from "@/actions/workshops";
 import { LiveSessionBanner } from "./LiveSessionBanner";
+import { SessionManage } from "./SessionManage";
 import { RESOURCE_KINDS } from "@/lib/enums";
 import {
   Avatar,
@@ -117,25 +117,25 @@ export default async function WorkshopPage({
       : null;
   const onlineish = workshop.format === "ONLINE" || workshop.format === "HYBRID";
 
+  const liveBanner = nextSession ? (
+    <LiveSessionBanner
+      session={{
+        index: nextSession.index,
+        title: nextSession.title,
+        startISO: nextSession.scheduledAt.toISOString(),
+        durationMin: nextSession.durationMin,
+        meetingUrl: nextSession.meetingUrl,
+      }}
+      online={onlineish}
+      location={workshop.location}
+      canJoin={isEnrolled || canManage}
+      isEnrolled={isEnrolled}
+    />
+  ) : null;
+
   return (
     <Shell className="pb-24 pt-7">
       <Breadcrumb href="/" label="Discover" current="Workshop" />
-
-      {nextSession ? (
-        <LiveSessionBanner
-          session={{
-            index: nextSession.index,
-            title: nextSession.title,
-            startISO: nextSession.scheduledAt.toISOString(),
-            durationMin: nextSession.durationMin,
-            meetingUrl: nextSession.meetingUrl,
-          }}
-          online={onlineish}
-          location={workshop.location}
-          canJoin={isEnrolled || canManage}
-          isEnrolled={isEnrolled}
-        />
-      ) : null}
 
       <div className={`grid items-start gap-10 ${isOverview ? "lg:grid-cols-[1fr_340px]" : "grid-cols-1"}`}>
         <div className="flex min-w-0 flex-col gap-8">
@@ -200,6 +200,8 @@ export default async function WorkshopPage({
               ) : null}
             </div>
           </div>
+
+          {liveBanner}
 
           <div className="flex gap-6 overflow-x-auto border-b border-line">
             {tabs.map(([key, label]) => {
@@ -330,40 +332,17 @@ export default async function WorkshopPage({
                           ) : null}
 
                           {canManage ? (
-                            <form
-                              action={updateSessionAction}
-                              className="flex flex-wrap items-end gap-2 border-t border-line-soft pt-2.5"
-                            >
-                              <input type="hidden" name="sessionId" value={s.id} />
-                              <div className="min-w-[160px] flex-1">
-                                <label className="!mb-1 !text-[11.5px] !text-muted">
-                                  Live meeting link
-                                </label>
-                                <input
-                                  name="meetingUrl"
-                                  defaultValue={s.meetingUrl ?? ""}
-                                  placeholder="https://meet…"
-                                  className="!py-1.5 !text-[13px]"
-                                />
-                              </div>
-                              <div className="min-w-[160px] flex-1">
-                                <label className="!mb-1 !text-[11.5px] !text-muted">
-                                  Recording link
-                                </label>
-                                <input
-                                  name="recordingUrl"
-                                  defaultValue={s.recordingUrl ?? ""}
-                                  placeholder="https://…"
-                                  className="!py-1.5 !text-[13px]"
-                                />
-                              </div>
-                              <button
-                                type="submit"
-                                className="mb-[1px] cursor-pointer border border-line-input bg-card px-3.5 py-1.5 text-[12.5px] font-semibold text-ink-4 hover:border-brick hover:text-brick"
-                              >
-                                Save links
-                              </button>
-                            </form>
+                            <SessionManage
+                              session={{
+                                id: s.id,
+                                title: s.title,
+                                description: s.description,
+                                scheduledAtInput: s.scheduledAt.toISOString().slice(0, 16),
+                                durationMin: s.durationMin,
+                                meetingUrl: s.meetingUrl,
+                                recordingUrl: s.recordingUrl,
+                              }}
+                            />
                           ) : null}
                         </Card>
                       );

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { avatarSrc, relativeTime } from "@/lib/format";
 import { statusPill } from "@/lib/theme";
-import { issueCertificatesAction, markAttendanceAction, updateSessionAction } from "@/actions/workshops";
+import { issueCertificatesAction } from "@/actions/workshops";
+import { AttendanceForm } from "./AttendanceForm";
 import { Avatar, Card, EmptyState, Pill, SectionLabel } from "@/components/ui";
 import { Details } from "@/components/Collapse";
 
@@ -57,71 +58,19 @@ export async function RosterTab({
           <EmptyState title="Add sessions before taking attendance." />
         ) : (
           sessions.map((s) => (
-            <Details key={s.id} label={`Session ${s.index} — ${s.title}`}>
-              <form action={markAttendanceAction} className="flex flex-col gap-3">
-                <input type="hidden" name="sessionId" value={s.id} />
-                <div className="grid gap-1.5 sm:grid-cols-2">
-                  {active.length === 0 ? (
-                    <div className="text-[13px] text-muted">Nobody enrolled yet.</div>
-                  ) : (
-                    active.map((e) => (
-                      <label
-                        key={e.id}
-                        className="flex cursor-pointer items-center gap-2 text-[13px] font-normal"
-                      >
-                        <input
-                          type="checkbox"
-                          name="present"
-                          value={e.userId}
-                          defaultChecked={attendedBy.get(e.userId)?.has(s.id) ?? false}
-                          className="!w-auto"
-                        />
-                        {e.user.name}
-                      </label>
-                    ))
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="cursor-pointer border-none bg-brick px-5 py-2 text-[13px] font-semibold"
-                    style={{ color: "#faf8f3" }}
-                  >
-                    Save attendance
-                  </button>
-                </div>
-              </form>
-
-              <form
-                action={updateSessionAction}
-                className="mt-3 flex flex-wrap items-end gap-2.5 border-t border-line-soft pt-3"
-              >
-                <input type="hidden" name="sessionId" value={s.id} />
-                <div className="min-w-[180px] flex-1">
-                  <label className="!text-[12px]">Live meeting link</label>
-                  <input
-                    name="meetingUrl"
-                    defaultValue={s.meetingUrl ?? ""}
-                    placeholder="https://meet…"
-                    className="!py-1.5 !text-[13px]"
-                  />
-                </div>
-                <div className="min-w-[180px] flex-1">
-                  <label className="!text-[12px]">Recording link</label>
-                  <input
-                    name="recordingUrl"
-                    defaultValue={s.recordingUrl ?? ""}
-                    placeholder="https://…"
-                    className="!py-1.5 !text-[13px]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="cursor-pointer border border-line-input bg-card px-4 py-2 text-[12.5px] font-semibold text-ink-4 hover:border-brick hover:text-brick"
-                >
-                  Save links
-                </button>
-              </form>
+            <Details
+              key={s.id}
+              label={`Session ${s.index} — ${s.title} · ${
+                active.filter((e) => attendedBy.get(e.userId)?.has(s.id)).length
+              }/${active.length} present`}
+            >
+              <AttendanceForm
+                sessionId={s.id}
+                people={active.map((e) => ({ userId: e.userId, name: e.user.name }))}
+                initiallyPresent={active
+                  .filter((e) => attendedBy.get(e.userId)?.has(s.id))
+                  .map((e) => e.userId)}
+              />
             </Details>
           ))
         )}

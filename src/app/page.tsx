@@ -6,6 +6,7 @@ import { fullDate, parseList } from "@/lib/format";
 import { stagePill } from "@/lib/theme";
 import { Card, LinkButton, Pill, Shell, Tag, EmptyState } from "@/components/ui";
 import { SearchBar } from "@/components/SearchBar";
+import { CardSessionTime } from "@/components/CardSessionTime";
 
 type Search = {
   filter?: string;
@@ -69,7 +70,7 @@ export default async function DiscoverPage({
           },
           include: {
             facilitator: { select: { name: true } },
-            sessions: { select: { id: true } },
+            sessions: { select: { id: true, scheduledAt: true, durationMin: true } },
             enrollments: { where: { status: { in: ["ENROLLED", "COMPLETED"] } }, select: { id: true } },
           },
           orderBy: { startDate: "asc" },
@@ -97,6 +98,8 @@ export default async function DiscoverPage({
     tags: string[];
     metaL: string;
     metaR: string;
+    nextSessionISO?: string | null;
+    nextSessionDuration?: number;
     recruiting: boolean;
     sortKey: number;
   };
@@ -123,8 +126,13 @@ export default async function DiscoverPage({
     };
   });
 
+  const nowMs = Date.now();
   const workshopCards: CardItem[] = workshops.map((w) => {
     const taken = w.enrollments.length;
+    // The soonest session that hasn't ended yet.
+    const next = [...w.sessions]
+      .filter((s) => s.scheduledAt.getTime() + s.durationMin * 60_000 > nowMs)
+      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0];
     return {
       key: w.id,
       href: `/workshops/${w.slug}`,
@@ -140,6 +148,8 @@ export default async function DiscoverPage({
       tags: [`${w.sessions.length} sessions`, w.certificateEnabled ? "Certificate" : w.format],
       metaL: w.facilitator.name,
       metaR: `Starts ${fullDate(w.startDate)}`,
+      nextSessionISO: next ? next.scheduledAt.toISOString() : null,
+      nextSessionDuration: next?.durationMin ?? 90,
       recruiting: taken < w.seats && w.status === "OPEN",
       sortKey: w.startDate.getTime(),
     };
@@ -374,10 +384,16 @@ export default async function DiscoverPage({
                 <div className="flex items-center gap-2 border-t border-line-soft pt-3 text-[12.5px] text-ink-4">
                   <span className="truncate font-semibold text-ink">{c.metaL}</span>
                   <div className="flex-1" />
-                  <span className="shrink-0" style={{ color: c.recruiting ? c.typeColor : undefined }}>
-                    {c.recruiting && c.kind === "project" ? "● " : ""}
-                    {c.metaR}
-                  </span>
+                  {c.kind === "workshop" && c.nextSessionISO ? (
+                    <span className="shrink-0">
+                      <CardSessionTime iso={c.nextSessionISO} durationMin={c.nextSessionDuration} />
+                    </span>
+                  ) : (
+                    <span className="shrink-0" style={{ color: c.recruiting ? c.typeColor : undefined }}>
+                      {c.recruiting && c.kind === "project" ? "● " : ""}
+                      {c.metaR}
+                    </span>
+                  )}
                 </div>
               </Card>
             </Link>

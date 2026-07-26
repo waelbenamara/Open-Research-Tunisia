@@ -457,6 +457,68 @@ export async function updateSessionAction(formData: FormData) {
   revalidatePath(`/workshops/${session.workshop.slug}`);
 }
 
+/** Full edit of a session — title, time, duration, description, and links. */
+export async function editSessionAction(formData: FormData) {
+  const sessionId = String(formData.get("sessionId"));
+  const session = await db.workshopSession.findUnique({
+    where: { id: sessionId },
+    include: { workshop: { select: { id: true, slug: true, title: true } } },
+  });
+  if (!session) return;
+  const { user, workshop } = await assertFacilitator(session.workshop.id);
+
+  const title = String(formData.get("title") || "").trim();
+  const whenRaw = String(formData.get("scheduledAt") || "");
+  const when = whenRaw ? new Date(whenRaw) : null;
+  const recordingUrl = String(formData.get("recordingUrl") || "").trim() || null;
+
+  await db.workshopSession.update({
+    where: { id: sessionId },
+    data: {
+      title: title || session.title,
+      description: String(formData.get("description") || "").trim(),
+      scheduledAt: when && !isNaN(when.getTime()) ? when : session.scheduledAt,
+      durationMin: Math.min(Math.max(Number(formData.get("durationMin")) || session.durationMin, 15), 480),
+      meetingUrl: String(formData.get("meetingUrl") || "").trim() || null,
+      recordingUrl,
+    },
+  });
+
+  // Notify enrollees when a recording is newly posted.
+  if (recordingUrl && !session.recordingUrl) {
+    const enrolled = await db.enrollment.findMany({
+      where: { workshopId: workshop.id, status: { in: ["ENROLLED", "COMPLETED"] } },
+      select: { userId: true },
+    });
+    await notify(
+      enrolled.map((e) => e.userId),
+      {
+        type: "RECORDING",
+        title: `Recording available — ${workshop.title}`,
+        body: title || session.title,
+        link: `/workshops/${session.workshop.slug}`,
+      },
+    );
+  }
+
+  await audit(user.id, "SESSION_UPDATE", "WorkshopSession", sessionId, title || session.title);
+  revalidatePath(`/workshops/${session.workshop.slug}`);
+}
+
+export async function deleteSessionAction(formData: FormData) {
+  const sessionId = String(formData.get("sessionId"));
+  const session = await db.workshopSession.findUnique({
+    where: { id: sessionId },
+    include: { workshop: { select: { id: true, slug: true } } },
+  });
+  if (!session) return;
+  const { user } = await assertFacilitator(session.workshop.id);
+
+  await db.workshopSession.delete({ where: { id: sessionId } });
+  await audit(user.id, "SESSION_DELETE", "WorkshopSession", sessionId, session.title);
+  revalidatePath(`/workshops/${session.workshop.slug}`);
+}
+
 export async function markAttendanceAction(formData: FormData) {
   const sessionId = String(formData.get("sessionId"));
   const session = await db.workshopSession.findUnique({
