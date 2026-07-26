@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { createProjectAction, updateProjectAction } from "@/actions/projects";
 import { Button, Field, FormError, FormSuccess, SectionLabel } from "@/components/ui";
+import { MarkdownField } from "@/components/MarkdownField";
 import {
   ETHICS_STATUSES,
   LANGUAGES,
@@ -160,7 +161,12 @@ export function ProjectForm({
           label="About this project"
           hint="the full description — context, method, how contributors are organised"
         >
-          <textarea name="about" rows={8} defaultValue={values.about} />
+          <MarkdownField
+            name="about"
+            defaultValue={values.about}
+            rows={10}
+            placeholder={"## Context\n\nWhat problem does this project address?\n\n## How we work\n\n- Weekly syncs on…\n- Data lives in…\n\nUse **bold**, lists, [links](https://…), and headings."}
+          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Research area">

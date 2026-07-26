@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import { Details } from "@/components/Collapse";
 import { ResourceEditForm } from "@/components/ResourceEditForm";
+import { Markdown } from "@/components/Markdown";
 import { EnrollPanel } from "./EnrollPanel";
 import { AssignmentsTab } from "./tabs/AssignmentsTab";
 import { RosterTab } from "./tabs/RosterTab";
@@ -187,12 +188,10 @@ export default async function WorkshopPage({
 
           {tab === "overview" ? (
             <div className="flex flex-col gap-9">
-              {workshop.about ? (
+              {workshop.about?.trim() ? (
                 <div>
                   <SectionLabel>About</SectionLabel>
-                  <div className="whitespace-pre-line text-[15px] leading-[1.75] text-ink-2 pretty">
-                    {workshop.about}
-                  </div>
+                  <Markdown>{workshop.about}</Markdown>
                 </div>
               ) : null}
 

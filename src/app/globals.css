@@ -220,3 +220,63 @@ label {
   font-weight: 600;
   margin-bottom: 6px;
 }
+
+/* ── Rendered Markdown (project/workshop descriptions, notes) ─────────────── */
+.prose-ort {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--color-ink-2);
+}
+.prose-ort > :first-child { margin-top: 0; }
+.prose-ort > :last-child { margin-bottom: 0; }
+.prose-ort p { margin: 0 0 0.85em; }
+.prose-ort h1,
+.prose-ort h2,
+.prose-ort h3,
+.prose-ort h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--color-ink);
+  margin: 1.4em 0 0.5em;
+}
+.prose-ort h1 { font-size: 1.5em; }
+.prose-ort h2 { font-size: 1.28em; }
+.prose-ort h3 { font-size: 1.12em; }
+.prose-ort h4 { font-size: 1em; font-weight: 600; }
+.prose-ort ul,
+.prose-ort ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+.prose-ort li { margin: 0.2em 0; }
+.prose-ort li > ul,
+.prose-ort li > ol { margin: 0.2em 0; }
+.prose-ort a { color: var(--color-brick); text-decoration: underline; text-underline-offset: 2px; }
+.prose-ort strong { color: var(--color-ink); font-weight: 600; }
+.prose-ort code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.88em;
+  background: var(--color-tint);
+  border: 1px solid var(--color-line-soft);
+  padding: 0.05em 0.4em;
+}
+.prose-ort pre {
+  background: var(--color-sand);
+  border: 1px solid var(--color-line);
+  padding: 0.9em 1.1em;
+  overflow-x: auto;
+  margin: 0 0 0.85em;
+  line-height: 1.5;
+}
+.prose-ort pre code { background: none; border: none; padding: 0; font-size: 0.86em; }
+.prose-ort blockquote {
+  border-left: 3px solid var(--color-brick);
+  margin: 0 0 0.85em;
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--color-ink-3);
+}
+.prose-ort hr { border: none; border-top: 1px solid var(--color-line); margin: 1.4em 0; }
+.prose-ort table { border-collapse: collapse; width: 100%; margin: 0 0 0.85em; font-size: 0.95em; display: block; overflow-x: auto; }
+.prose-ort th,
+.prose-ort td { border: 1px solid var(--color-line); padding: 0.4em 0.7em; text-align: left; }
+.prose-ort th { background: var(--color-tint); font-weight: 600; color: var(--color-ink); }
+.prose-ort img { max-width: 100%; height: auto; }
+.prose-ort input[type="checkbox"] { width: auto; margin-right: 0.4em; }

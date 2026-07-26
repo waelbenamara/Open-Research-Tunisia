@@ -2,6 +2,7 @@ import { shortDate } from "@/lib/format";
 import { PROJECT_STAGES } from "@/lib/enums";
 import { postAnnouncementAction, setProjectStageAction } from "@/actions/projects";
 import { Card, EmptyState, SectionLabel } from "@/components/ui";
+import { Markdown } from "@/components/Markdown";
 import { Details } from "@/components/Collapse";
 import type { ProjectAccess } from "@/lib/permissions";
 
@@ -77,9 +78,11 @@ export function OverviewTab({ project, stageIdx, access }: Props) {
 
       <div>
         <SectionLabel>About this project</SectionLabel>
-        <div className="whitespace-pre-line text-[15px] leading-[1.75] text-ink-2 pretty">
-          {project.about || "No description yet."}
-        </div>
+        {project.about?.trim() ? (
+          <Markdown>{project.about}</Markdown>
+        ) : (
+          <div className="text-[15px] text-muted">No description yet.</div>
+        )}
       </div>
 
       <div>

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { createWorkshopAction } from "@/actions/workshops";
 import { Button, Field, FormError, SectionLabel } from "@/components/ui";
 import { LANGUAGES, WORKSHOP_FORMATS, WORKSHOP_LEVELS } from "@/lib/enums";
+import { MarkdownField } from "@/components/MarkdownField";
 
 const LEVEL_HINTS: Record<string, string> = {
   Beginner: "No prior experience assumed — start from zero.",
@@ -94,8 +95,12 @@ export function WorkshopForm({ projects }: { projects: { id: string; title: stri
             placeholder="Four hands-on sessions taking you from no code to cleaning and exploring a real dataset…"
           />
         </Field>
-        <Field label="About" hint="optional — the fuller description">
-          <textarea name="about" rows={4} />
+        <Field label="About" hint="optional — the fuller description, in Markdown">
+          <MarkdownField
+            name="about"
+            rows={6}
+            placeholder={"What this workshop covers, who it's for, and what people will leave able to do.\n\nUse **bold**, lists, and [links](https://…)."}
+          />
         </Field>
         <Field label="What you'll learn" hint="one concrete outcome per line — people enrol for these">
           <div className="flex flex-col gap-2">
