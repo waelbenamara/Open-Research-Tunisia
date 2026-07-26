@@ -118,7 +118,9 @@ export async function createProjectAction(
     .filter(Boolean)
     .slice(0, 8);
 
-  let slug = slugify(d.title);
+  // Titles with no Latin characters (e.g. Arabic) slugify to "" — fall back to
+  // a safe base so we never build an empty URL that 404s after creation.
+  let slug = slugify(d.title) || "project";
   if (await db.project.findUnique({ where: { slug } })) {
     slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
   }

@@ -136,9 +136,9 @@ export function ProjectForm({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Forecasting Water Stress in the Medjerda Basin"
           />
-          {mode === "create" && slug ? (
+          {mode === "create" && title.trim() ? (
             <div className="mt-1.5 text-[12px] text-muted">
-              Will live at <span className="font-mono">/projects/{slug}</span>
+              Will live at <span className="font-mono">/projects/{slug || "project"}</span>
             </div>
           ) : null}
         </Field>

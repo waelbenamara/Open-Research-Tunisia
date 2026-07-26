@@ -56,7 +56,8 @@ export async function createWorkshopAction(
     return { error: "Add a location — people need to know where an in-person workshop happens." };
   }
 
-  let slug = slugify(d.title);
+  // Non-Latin titles (e.g. Arabic) slugify to "" — fall back to a safe base.
+  let slug = slugify(d.title) || "workshop";
   if (await db.workshop.findUnique({ where: { slug } })) {
     slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
   }
