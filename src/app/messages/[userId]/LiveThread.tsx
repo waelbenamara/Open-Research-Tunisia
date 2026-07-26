@@ -1,10 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { sendDirectMessageAction } from "@/actions/messages";
-import { dateTime, lastSeen as fmtLastSeen } from "@/lib/format";
+import { markThreadReadAction } from "@/actions/messages";
+import { Avatar } from "@/components/ui";
+import { dateTime, fileSize, lastSeen as fmtLastSeen } from "@/lib/format";
 
-type Msg = { id: string; body: string; senderId: string; createdAt: string };
+type Att = { id: string; filename: string; ext: string; size: number };
+type Msg = {
+  id: string;
+  body: string;
+  senderId: string;
+  createdAt: string;
+  attachments: Att[];
+  pendingFiles?: number;
+};
+type Other = {
+  id: string;
+  name: string;
+  avatarColor: string;
+  avatarSrc: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
+  suspended: boolean;
+};
+
+const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp"]);
 
 export function LiveThread({
   meId,
@@ -13,7 +33,7 @@ export function LiveThread({
   initialSeenUpToAt,
 }: {
   meId: string;
-  other: { id: string; online: boolean; lastSeenAt: string | null; suspended: boolean };
+  other: Other;
   initialMessages: Msg[];
   initialSeenUpToAt: string | null;
 }) {
@@ -23,11 +43,15 @@ export function LiveThread({
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [seenUpToAt, setSeenUpToAt] = useState<string | null>(initialSeenUpToAt);
   const [value, setValue] = useState("");
+  const [pending, setPending] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const lastTypingSent = useRef(0);
-  // Cursor = id of the newest message we know about.
   const cursor = useRef<string>(initialMessages[initialMessages.length - 1]?.id ?? "");
 
   function scrollToBottom(smooth = true) {
@@ -36,7 +60,20 @@ export function LiveThread({
   }
   useEffect(() => scrollToBottom(false), []);
 
-  // Poll loop — new messages, partner presence + typing, and read receipts.
+  // Reading the thread clears its unread messages + notifications (Inbox badge).
+  useEffect(() => {
+    markThreadReadAction(other.id).catch(() => {});
+  }, [other.id]);
+
+  // Auto-grow the textarea.
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+  }, [value]);
+
+  // Poll loop — new messages, presence, typing, read receipts.
   useEffect(() => {
     let alive = true;
     async function poll() {
@@ -59,7 +96,7 @@ export function LiveThread({
         setPartnerTyping(!!data.partner?.typing);
         setSeenUpToAt(data.seenUpToAt ?? null);
       } catch {
-        /* transient — try again next tick */
+        /* transient */
       }
     }
     poll();
@@ -72,41 +109,85 @@ export function LiveThread({
 
   function onType(next: string) {
     setValue(next);
-    const now = Date.now();
-    if (next && now - lastTypingSent.current > 2500) {
-      lastTypingSent.current = now;
+    const t = Date.now();
+    if (next && t - lastTypingSent.current > 2500) {
+      lastTypingSent.current = t;
       fetch(`/api/messages/${other.id}/typing`, { method: "POST" }).catch(() => {});
     }
   }
 
-  async function send() {
+  function addFiles(list: FileList | null) {
+    if (!list) return;
+    setPending((prev) => [...prev, ...Array.from(list)].slice(0, 10));
+  }
+
+  function send() {
     const body = value.trim();
-    if (!body || sending) return;
+    if ((!body && pending.length === 0) || sending) return;
+    setError(null);
     setSending(true);
-    // Optimistic bubble so it appears instantly.
-    const tempId = `temp-${now()}`;
-    const optimistic: Msg = { id: tempId, body, senderId: meId, createdAt: new Date().toISOString() };
+
+    const tempId = `temp-${Math.floor(performance.now())}`;
+    const optimistic: Msg = {
+      id: tempId,
+      body,
+      senderId: meId,
+      createdAt: new Date().toISOString(),
+      attachments: [],
+      pendingFiles: pending.length || undefined,
+    };
     setMessages((prev) => [...prev, optimistic]);
+    const files = pending;
     setValue("");
+    setPending([]);
     setTimeout(() => scrollToBottom(), 20);
+
     const fd = new FormData();
-    fd.set("recipientId", other.id);
     fd.set("body", body);
-    try {
-      const res = await sendDirectMessageAction(fd);
-      // Replace the optimistic bubble with the real row (or drop it if the poll
-      // already brought the real one in), so it never shows twice.
-      if (res?.id) {
-        const real: Msg = { id: res.id, body, senderId: meId, createdAt: res.createdAt };
+    for (const f of files) fd.append("files", f);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/messages/${other.id}/send`);
+    if (files.length > 0) {
+      setProgress(0);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    xhr.onload = () => {
+      setSending(false);
+      setProgress(null);
+      let data: { message?: Msg; error?: string } = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        /* ignore */
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && data.message) {
+        const real = data.message;
         setMessages((prev) => {
           if (prev.some((m) => m.id === real.id)) return prev.filter((m) => m.id !== tempId);
           return prev.map((m) => (m.id === tempId ? real : m));
         });
-        cursor.current = res.id;
+        cursor.current = real.id;
+        setTimeout(() => scrollToBottom(), 30);
+      } else {
+        // Roll back the optimistic bubble and surface the reason.
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+        setValue(body);
+        setPending(files);
+        setError(data.error ?? "Couldn't send. Try again.");
       }
-    } finally {
+    };
+    xhr.onerror = () => {
       setSending(false);
-    }
+      setProgress(null);
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setValue(body);
+      setPending(files);
+      setError("Network error — try again.");
+    };
+    xhr.send(fd);
   }
 
   const seenTime = seenUpToAt ? new Date(seenUpToAt).getTime() : 0;
@@ -118,11 +199,9 @@ export function LiveThread({
 
   return (
     <div className="flex flex-col">
-      <div className="mb-1 flex items-center gap-2 text-[12.5px]">
+      <div className="mb-2 flex items-center gap-2 text-[12.5px]">
         <span
-          className={`inline-block h-[8px] w-[8px] rounded-full ${
-            online ? "bg-olive" : "bg-line-strong"
-          }`}
+          className={`inline-block h-[8px] w-[8px] rounded-full ${online ? "bg-olive" : "bg-line-strong"}`}
           style={online ? { boxShadow: "0 0 0 3px var(--color-olive-tint)" } : undefined}
           aria-hidden
         />
@@ -133,32 +212,52 @@ export function LiveThread({
 
       <div
         ref={scrollRef}
-        className="flex max-h-[58vh] min-h-[240px] flex-col gap-2.5 overflow-y-auto py-2"
+        className="flex max-h-[56vh] min-h-[280px] flex-col gap-1.5 overflow-y-auto border border-line bg-sand/40 p-4"
       >
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-[13.5px] text-muted">No messages yet — say hello.</p>
+          <p className="py-10 text-center text-[13.5px] text-muted">No messages yet — say hello.</p>
         ) : (
-          messages.map((m) => {
+          messages.map((m, i) => {
             const mine = m.senderId === meId;
             const day = new Date(m.createdAt).toDateString();
             const showDay = day !== lastDay;
             lastDay = day;
+            const prevSame = i > 0 && messages[i - 1].senderId === m.senderId && !showDay;
             return (
               <div key={m.id}>
                 {showDay ? (
-                  <div className="my-3 text-center text-[11.5px] uppercase tracking-[0.08em] text-muted">
+                  <div className="my-3 text-center text-[11px] uppercase tracking-[0.1em] text-muted">
                     {dayLabel(m.createdAt)}
                   </div>
                 ) : null}
-                <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[78%] px-3.5 py-2 text-[14px] leading-[1.5] ${
-                      mine ? "bg-brick" : "border border-line bg-card text-ink-2"
-                    }`}
-                    style={mine ? { color: "#faf8f3" } : undefined}
-                    title={dateTime(m.createdAt)}
-                  >
-                    <span className="whitespace-pre-wrap break-words">{m.body}</span>
+                <div className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+                  {!mine ? (
+                    <div className="w-[26px] shrink-0">
+                      {!prevSame ? (
+                        <Avatar name={other.name} color={other.avatarColor} src={other.avatarSrc} size={26} />
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div className={`flex max-w-[76%] flex-col gap-1 ${mine ? "items-end" : "items-start"}`}>
+                    {m.body ? (
+                      <div
+                        className={`px-3.5 py-2 text-[14px] leading-[1.5] ${
+                          mine ? "bg-brick" : "border border-line bg-card text-ink-2"
+                        }`}
+                        style={mine ? { color: "#faf8f3" } : undefined}
+                        title={dateTime(m.createdAt)}
+                      >
+                        <span className="whitespace-pre-wrap break-words">{m.body}</span>
+                      </div>
+                    ) : null}
+                    {m.pendingFiles ? (
+                      <div className="border border-dashed border-line-strong bg-card px-3 py-2 text-[12.5px] text-muted">
+                        Uploading {m.pendingFiles} file{m.pendingFiles === 1 ? "" : "s"}…
+                      </div>
+                    ) : null}
+                    {m.attachments.map((a) => (
+                      <Attachment key={a.id} att={a} mine={mine} />
+                    ))}
                   </div>
                 </div>
               </div>
@@ -167,7 +266,10 @@ export function LiveThread({
         )}
 
         {partnerTyping ? (
-          <div className="flex justify-start">
+          <div className="flex items-end gap-2">
+            <div className="w-[26px] shrink-0">
+              <Avatar name={other.name} color={other.avatarColor} src={other.avatarSrc} size={26} />
+            </div>
             <div className="flex items-center gap-1 border border-line bg-card px-3 py-2.5">
               <Dot /> <Dot delay={0.15} /> <Dot delay={0.3} />
             </div>
@@ -176,20 +278,63 @@ export function LiveThread({
       </div>
 
       {myLastSeen ? (
-        <div className="mt-0.5 text-right text-[11.5px] text-muted">Seen</div>
+        <div className="mt-1 text-right text-[11.5px] text-muted">Seen</div>
       ) : myLast && !myLast.id.startsWith("temp-") ? (
-        <div className="mt-0.5 text-right text-[11.5px] text-muted">Delivered</div>
+        <div className="mt-1 text-right text-[11.5px] text-muted">Delivered</div>
       ) : null}
 
-      <div className="mt-4 border-t border-line pt-4">
-        {other.suspended ? (
-          <p className="text-[13px] text-muted">This account is suspended and can&apos;t receive messages.</p>
-        ) : (
-          <form
-            action={send}
-            className="flex items-end gap-2.5"
-          >
+      {/* Composer */}
+      {other.suspended ? (
+        <p className="mt-4 text-[13px] text-muted">
+          This account is suspended and can&apos;t receive messages.
+        </p>
+      ) : (
+        <div className="mt-4">
+          {error ? <div className="mb-1.5 text-[12.5px] font-semibold text-brick">{error}</div> : null}
+          {pending.length > 0 ? (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {pending.map((f, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-2 border border-line bg-tint px-2.5 py-1 text-[12px]"
+                >
+                  <ClipIcon />
+                  <span className="max-w-[180px] truncate">{f.name}</span>
+                  <span className="text-muted">{fileSize(f.size)}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${f.name}`}
+                    className="text-muted hover:text-brick"
+                    onClick={() => setPending((prev) => prev.filter((_, j) => j !== idx))}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="flex items-end gap-0 border border-line-input bg-card focus-within:border-brick">
+            <button
+              type="button"
+              aria-label="Attach files"
+              onClick={() => fileRef.current?.click()}
+              className="grid h-[44px] w-[44px] shrink-0 cursor-pointer place-items-center border-none bg-transparent text-ink-4 hover:text-brick"
+            >
+              <ClipIcon size={18} />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
             <textarea
+              ref={taRef}
               value={value}
               onChange={(e) => onType(e.target.value)}
               onKeyDown={(e) => {
@@ -198,29 +343,72 @@ export function LiveThread({
                   send();
                 }
               }}
-              rows={2}
+              rows={1}
               placeholder="Write a message…"
               aria-label="Write a message"
-              className="flex-1 resize-none"
+              className="!m-0 max-h-[160px] flex-1 resize-none !border-none !bg-transparent !py-3 !px-0 !shadow-none focus:!shadow-none"
+              style={{ outline: "none" }}
             />
             <button
-              type="submit"
-              disabled={sending || !value.trim()}
-              className="cursor-pointer whitespace-nowrap border-none bg-brick px-5 py-2.5 text-[13px] font-semibold disabled:opacity-40"
+              type="button"
+              onClick={send}
+              disabled={sending || (!value.trim() && pending.length === 0)}
+              className="m-1.5 shrink-0 cursor-pointer self-end border-none bg-brick px-5 py-2 text-[13px] font-semibold disabled:opacity-40"
               style={{ color: "#faf8f3" }}
             >
-              Send
+              {sending ? "Sending…" : "Send"}
             </button>
-          </form>
-        )}
-      </div>
+          </div>
+
+          {progress !== null ? (
+            <div className="mt-1.5 h-[3px] w-full overflow-hidden bg-line-soft">
+              <div
+                className="h-full bg-brick transition-[width] duration-150"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
 
-// Merge polled messages, skipping ones already present by id and reconciling
-// any pending optimistic bubble (same sender + body) into its real row rather
-// than appending a duplicate. Returns the original array if nothing changed.
+function Attachment({ att, mine }: { att: Att; mine: boolean }) {
+  const href = `/api/messages/attachments/${att.id}`;
+  if (IMAGE_EXTS.has(att.ext)) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={href}
+          alt={att.filename}
+          className="max-h-[220px] max-w-[240px] border border-line object-cover"
+        />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex max-w-[260px] items-center gap-2.5 px-3 py-2 no-underline ${
+        mine ? "bg-brick-dark text-paper" : "border border-line bg-card text-ink-2"
+      }`}
+      style={mine ? { color: "#faf8f3" } : undefined}
+    >
+      <FileIcon />
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] font-semibold">{att.filename}</span>
+        <span className={`text-[11.5px] ${mine ? "text-paper/70" : "text-muted"}`}>
+          {att.ext.toUpperCase()} · {fileSize(att.size)}
+        </span>
+      </span>
+    </a>
+  );
+}
+
 function mergeIncoming(prev: Msg[], incoming: Msg[]): Msg[] {
   let result = prev;
   let changed = false;
@@ -239,11 +427,6 @@ function mergeIncoming(prev: Msg[], incoming: Msg[]): Msg[] {
   return changed ? result : prev;
 }
 
-// Monotonic-ish local id source; avoids Date.now() lint in shared code paths.
-function now() {
-  return Math.floor(performance.now());
-}
-
 function dayLabel(iso: string) {
   const d = new Date(iso);
   const today = new Date();
@@ -260,5 +443,32 @@ function Dot({ delay = 0 }: { delay?: number }) {
       className="inline-block h-[6px] w-[6px] rounded-full bg-muted"
       style={{ animation: "typingBlink 1s infinite", animationDelay: `${delay}s` }}
     />
+  );
+}
+
+function ClipIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M21 11.5l-8.6 8.6a5 5 0 01-7-7l8.6-8.6a3.3 3.3 0 014.7 4.7l-8.6 8.6a1.7 1.7 0 01-2.3-2.3l7.9-7.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+      <path
+        d="M14 3v5h5M14 3H6v18h12V8l-4-5z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

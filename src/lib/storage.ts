@@ -126,6 +126,37 @@ export async function storeUpload(file: File): Promise<StoredFile | null> {
   return { filePath: `local:${name}`, fileSize: file.size, ext };
 }
 
+/**
+ * Upload a buffer under a caller-chosen object name (used for content-addressed
+ * blobs, where the name is the file's hash). Idempotent: if the object already
+ * exists, the identical bytes are simply re-put. Returns the driver-prefixed key.
+ */
+export async function uploadNamed(
+  name: string,
+  buffer: Buffer,
+  contentType: string,
+): Promise<string> {
+  if (storageDriver === "supabase") {
+    const supabase = await supabaseClient();
+    const { error } = await supabase.storage.from(BUCKET).upload(name, buffer, {
+      contentType: contentType || "application/octet-stream",
+      upsert: true,
+    });
+    if (error) throw new Error(`Upload failed: ${error.message}`);
+    return `supabase:${name}`;
+  }
+  await mkdir(LOCAL_DIR, { recursive: true });
+  await writeFile(path.join(LOCAL_DIR, name), buffer);
+  return `local:${name}`;
+}
+
+export const UPLOAD_MAX_BYTES = MAX_BYTES;
+export const ALLOWED_EXTS = ALLOWED;
+
+export function extAllowed(ext: string) {
+  return ALLOWED.has(ext);
+}
+
 export type Resolved =
   | { kind: "redirect"; url: string }
   | { kind: "buffer"; body: Buffer; filename: string };

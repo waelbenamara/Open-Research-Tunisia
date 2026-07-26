@@ -542,8 +542,39 @@ model DirectMessage {
   readAt      DateTime?
   createdAt   DateTime  @default(now())
 
+  attachments MessageAttachment[]
+
   @@index([senderId, recipientId, createdAt])
   @@index([recipientId, readAt])
+}
+
+/// Content-addressed storage. One row per unique file *content* (SHA-256), so
+/// two uploads with identical bytes share a single stored object — a file is
+/// only ever stored once, however many times it's shared.
+model FileBlob {
+  hash        String   @id // sha-256 hex of the content
+  storageKey  String // driver-prefixed key, e.g. "supabase:<hash>.pdf"
+  size        Int
+  ext         String
+  contentType String
+  createdAt   DateTime @default(now())
+
+  attachments MessageAttachment[]
+}
+
+/// A file shared inside a conversation, pointing at a deduplicated blob and
+/// keeping the original filename for display/download.
+model MessageAttachment {
+  id        String        @id @default(cuid())
+  messageId String
+  message   DirectMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  blobHash  String
+  blob      FileBlob      @relation(fields: [blobHash], references: [hash])
+  filename  String
+  createdAt DateTime      @default(now())
+
+  @@index([messageId])
+  @@index([blobHash])
 }
 
 model Notification {

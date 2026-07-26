@@ -22,12 +22,17 @@ export async function GET(
   const { userId: otherId } = await params;
   const afterId = new URL(request.url).searchParams.get("after") ?? "";
 
-  // Being on the thread counts as presence, and reads their messages to me.
+  // Being on the thread counts as presence, and reads their messages to me
+  // (plus the notifications those messages generated, so the Inbox badge clears).
   const now = new Date();
   await db.user.update({ where: { id: me.id }, data: { lastSeenAt: now } });
   await db.directMessage.updateMany({
     where: { senderId: otherId, recipientId: me.id, readAt: null },
     data: { readAt: now },
+  });
+  await db.notification.updateMany({
+    where: { userId: me.id, type: "MESSAGE_DIRECT", link: `/messages/${otherId}`, read: false },
+    data: { read: true },
   });
 
   const partner = await db.user.findUnique({
@@ -37,14 +42,14 @@ export async function GET(
   if (!partner) return NextResponse.json({ ok: false }, { status: 404 });
 
   // New messages since the client's cursor (either direction).
-  let newMessages: { id: string; body: string; senderId: string; createdAt: Date }[] = [];
+  let newMessages: unknown[] = [];
   if (afterId) {
     const cursor = await db.directMessage.findUnique({
       where: { id: afterId },
       select: { createdAt: true },
     });
     if (cursor) {
-      newMessages = await db.directMessage.findMany({
+      const rows = await db.directMessage.findMany({
         where: {
           createdAt: { gt: cursor.createdAt },
           OR: [
@@ -53,8 +58,28 @@ export async function GET(
           ],
         },
         orderBy: { createdAt: "asc" },
-        select: { id: true, body: true, senderId: true, createdAt: true },
+        select: {
+          id: true,
+          body: true,
+          senderId: true,
+          createdAt: true,
+          attachments: {
+            select: { id: true, filename: true, blob: { select: { ext: true, size: true } } },
+          },
+        },
       });
+      newMessages = rows.map((m) => ({
+        id: m.id,
+        body: m.body,
+        senderId: m.senderId,
+        createdAt: m.createdAt.toISOString(),
+        attachments: m.attachments.map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          ext: a.blob.ext,
+          size: a.blob.size,
+        })),
+      }));
     }
   }
 
