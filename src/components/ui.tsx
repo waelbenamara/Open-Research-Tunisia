@@ -94,13 +94,16 @@ export function Card({
   children,
   className = "",
   hover = false,
+  style,
 }: {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  style?: React.CSSProperties;
 }) {
   return (
     <div
+      style={style}
       className={`border border-line bg-card ${
         hover ? "transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-[0_2px_12px_rgba(60,45,20,0.07)]" : ""
       } ${className}`}

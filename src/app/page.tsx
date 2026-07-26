@@ -85,8 +85,10 @@ export default async function DiscoverPage({
   type CardItem = {
     key: string;
     href: string;
+    kind: "project" | "workshop";
     typeLabel: string;
     typeColor: string;
+    typeTint: string;
     stage: string;
     stageBg: string;
     stageFg: string;
@@ -104,8 +106,10 @@ export default async function DiscoverPage({
     return {
       key: p.id,
       href: `/projects/${p.slug}`,
-      typeLabel: "Research project",
+      kind: "project",
+      typeLabel: "Project",
       typeColor: "#8a3325",
+      typeTint: "#f7ece8",
       stage: p.stage,
       stageBg: pill.bg,
       stageFg: pill.fg,
@@ -124,8 +128,10 @@ export default async function DiscoverPage({
     return {
       key: w.id,
       href: `/workshops/${w.slug}`,
+      kind: "workshop",
       typeLabel: "Workshop",
       typeColor: "#4d6b3c",
+      typeTint: "#e4ecdb",
       stage: w.level,
       stageBg: "#f2eee3",
       stageFg: "#57503f",
@@ -231,14 +237,58 @@ export default async function DiscoverPage({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2.5 pb-6 pt-7">
+      {/* Listing toolbar — title, create actions, search */}
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5 pt-9">
+        <div>
+          <h2 className="font-serif text-[26px] font-medium leading-tight">Discover</h2>
+          <p className="mt-0.5 text-[13.5px] text-ink-4">
+            {cards.length} {cards.length === 1 ? "listing" : "listings"} · research projects to join
+            and workshops to learn from
+          </p>
+        </div>
+        {canCreateProject(user) ? (
+          <div className="flex flex-wrap gap-2.5">
+            <Link
+              href="/projects/new"
+              className="bg-brick px-4 py-2.5 text-[13px] font-semibold no-underline hover:bg-brick-dark hover:no-underline"
+              style={{ color: "#faf8f3" }}
+            >
+              + New project
+            </Link>
+            <Link
+              href="/workshops/new"
+              className="border border-olive bg-card px-4 py-2.5 text-[13px] font-semibold text-olive no-underline hover:bg-olive-tint hover:no-underline"
+            >
+              + New workshop
+            </Link>
+          </div>
+        ) : user ? (
+          <Link
+            href="/request-posting-rights"
+            className="border border-line-input bg-card px-4 py-2.5 text-[13px] font-semibold text-ink-4 no-underline hover:border-brick hover:text-brick hover:no-underline"
+          >
+            Want to post a project?
+          </Link>
+        ) : (
+          <Link
+            href="/register"
+            className="bg-brick px-4 py-2.5 text-[13px] font-semibold no-underline hover:bg-brick-dark hover:no-underline"
+            style={{ color: "#faf8f3" }}
+          >
+            Join the initiative
+          </Link>
+        )}
+      </div>
+
+      {/* Filters + search */}
+      <div className="flex flex-wrap items-center gap-2.5 pb-6 pt-5">
         {FILTERS.map(([key, label]) => {
           const active = filter === key;
           return (
             <Link
               key={key}
               href={qs({ filter: key })}
-              className="rounded-full border px-4 py-2 text-[13px] font-medium no-underline hover:no-underline"
+              className="border px-4 py-2 text-[13px] font-medium no-underline hover:no-underline"
               style={{
                 borderColor: active ? "#211d16" : "#ddd5c4",
                 background: active ? "#211d16" : "#fffefb",
@@ -249,10 +299,8 @@ export default async function DiscoverPage({
             </Link>
           );
         })}
-
         <div className="flex-1" />
         <SearchBar defaultValue={term} filter={filter} area={area} />
-        <div className="text-[13px] text-muted">{cards.length} listings</div>
       </div>
 
       {areas.length > 1 ? (
@@ -294,11 +342,15 @@ export default async function DiscoverPage({
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => (
             <Link key={c.key} href={c.href} className="no-underline hover:no-underline">
-              <Card hover className="flex h-full cursor-pointer flex-col gap-3.5 p-6">
+              <Card
+                hover
+                className="flex h-full cursor-pointer flex-col gap-3 border-t-[3px] p-6 pt-5"
+                style={{ borderTopColor: c.typeColor }}
+              >
                 <div className="flex items-center gap-2">
                   <span
-                    className="text-[11px] font-semibold uppercase tracking-[0.12em]"
-                    style={{ color: c.typeColor }}
+                    className="px-2 py-[3px] text-[10.5px] font-bold uppercase tracking-[0.08em]"
+                    style={{ background: c.typeTint, color: c.typeColor }}
                   >
                     {c.typeLabel}
                   </span>
@@ -307,10 +359,12 @@ export default async function DiscoverPage({
                     {c.stage}
                   </Pill>
                 </div>
-                <div className="font-serif text-[21px] font-medium leading-[1.25] text-ink balance">
+                <div className="font-serif text-[20px] font-medium leading-[1.25] text-ink balance">
                   {c.title}
                 </div>
-                <div className="text-[13.5px] leading-[1.55] text-ink-4 pretty">{c.summary}</div>
+                <div className="text-[13.5px] leading-[1.55] text-ink-4 pretty line-clamp-3">
+                  {c.summary}
+                </div>
                 <div className="flex-1" />
                 <div className="flex flex-wrap gap-1.5">
                   {c.tags.slice(0, 3).map((t) => (
@@ -318,9 +372,12 @@ export default async function DiscoverPage({
                   ))}
                 </div>
                 <div className="flex items-center gap-2 border-t border-line-soft pt-3 text-[12.5px] text-ink-4">
-                  <span className="font-semibold text-ink">{c.metaL}</span>
+                  <span className="truncate font-semibold text-ink">{c.metaL}</span>
                   <div className="flex-1" />
-                  <span>{c.metaR}</span>
+                  <span className="shrink-0" style={{ color: c.recruiting ? c.typeColor : undefined }}>
+                    {c.recruiting && c.kind === "project" ? "● " : ""}
+                    {c.metaR}
+                  </span>
                 </div>
               </Card>
             </Link>
