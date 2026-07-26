@@ -40,7 +40,7 @@ export default async function EditProjectPage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-7">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-7">
       <Breadcrumb href={`/projects/${slug}`} label={project.title} current="Edit" />
       <h1 className="mb-8 font-serif text-[32px] font-medium">Edit project</h1>
 

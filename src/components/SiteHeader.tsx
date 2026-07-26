@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UserMenu } from "./UserMenu";
 import { TourButton } from "./TourButton";
+import { MobileNav } from "./MobileNav";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
@@ -14,14 +15,28 @@ export async function SiteHeader() {
       ])
     : [0, 0];
 
+  const mobileLinks: { href: string; label: string; badge?: number }[] = [
+    { href: "/", label: "Discover" },
+    ...(user ? [{ href: "/feed", label: "Feed" }] : []),
+    { href: "/publications", label: "Publications" },
+    { href: "/people", label: "People" },
+    ...(user ? [{ href: "/dashboard", label: "My work" }] : []),
+    ...(user ? [{ href: "/messages", label: "Messages", badge: unreadMsgs }] : []),
+    ...(user ? [{ href: "/notifications", label: "Inbox", badge: unread }] : []),
+    ...(user?.role === "ADMIN" ? [{ href: "/admin", label: "Admin" }] : []),
+    ...(user ? [] : [{ href: "/login", label: "Sign in" }, { href: "/register", label: "Join" }]),
+  ];
+
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-[rgba(250,248,243,0.94)] backdrop-blur-[8px]">
-      <div className="mx-auto flex max-w-[1200px] items-center gap-7 px-8 py-3">
+      <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-3 sm:gap-7 sm:px-8">
+        <MobileNav links={mobileLinks} />
+
         <Link href="/" className="flex items-center gap-[11px] hover:no-underline">
-          <div className="grid h-[30px] w-[30px] place-items-center bg-brick font-serif text-[17px] font-semibold text-paper">
+          <div className="grid h-[30px] w-[30px] shrink-0 place-items-center bg-brick font-serif text-[17px] font-semibold text-paper">
             OR
           </div>
-          <div className="font-serif text-[20px] font-semibold tracking-[0.01em] text-ink">
+          <div className="hidden font-serif text-[20px] font-semibold tracking-[0.01em] text-ink sm:block">
             Open Research Tunisia
           </div>
         </Link>
@@ -71,12 +86,14 @@ export async function SiteHeader() {
         <div className="flex-1" />
 
         {user ? (
-          <div className="flex items-center gap-3">
-            <TourButton />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:block">
+              <TourButton />
+            </span>
             <Link
               href="/messages"
               data-tour="messages"
-              className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"
+              className="relative hidden text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline md:inline-flex md:items-center"
               aria-label={`Messages${unreadMsgs ? `, ${unreadMsgs} unread` : ""}`}
             >
               Messages
@@ -89,7 +106,7 @@ export async function SiteHeader() {
             <Link
               href="/notifications"
               data-tour="inbox"
-              className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"
+              className="relative hidden text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline md:inline-flex md:items-center"
               aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
             >
               Inbox
@@ -108,13 +125,13 @@ export async function SiteHeader() {
             />
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/login" className="text-[13.5px] font-medium text-ink-4 hover:text-ink">
               Sign in
             </Link>
             <Link
               href="/register"
-              className="bg-brick px-[18px] py-2 text-[13.5px] font-semibold text-paper no-underline hover:bg-brick-dark hover:no-underline"
+              className="whitespace-nowrap bg-brick px-3.5 py-2 text-[13.5px] font-semibold text-paper no-underline hover:bg-brick-dark hover:no-underline sm:px-[18px]"
               style={{ color: "#faf8f3" }}
             >
               Join

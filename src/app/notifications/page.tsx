@@ -21,7 +21,7 @@ export default async function NotificationsPage() {
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-11">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-11">
       <div className="mb-7 flex flex-wrap items-center gap-4">
         <h1 className="font-serif text-[32px] font-medium">Inbox</h1>
         <div className="flex-1" />

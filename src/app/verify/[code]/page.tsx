@@ -27,7 +27,7 @@ export default async function VerifyCodePage({ params }: { params: Promise<{ cod
 
   if (!cert || cert.revoked) {
     return (
-      <div className="mx-auto w-full max-w-[560px] px-8 py-20 text-center">
+      <div className="mx-auto w-full max-w-[560px] px-4 sm:px-8 py-20 text-center">
         <div className="eyebrow mb-3">Certificate verification</div>
         <h1 className="font-serif text-[30px] font-medium">Not a valid certificate</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-ink-3">
@@ -42,7 +42,7 @@ export default async function VerifyCodePage({ params }: { params: Promise<{ cod
   }
 
   return (
-    <div className="mx-auto w-full max-w-[620px] px-8 py-16">
+    <div className="mx-auto w-full max-w-[620px] px-4 sm:px-8 py-16">
       <div className="eyebrow mb-3">Certificate verification</div>
       <Card className="border-t-[4px] border-t-brick px-9 py-9">
         <div className="mb-1 inline-block bg-olive-tint px-3 py-1 text-[12px] font-semibold text-olive-dark">

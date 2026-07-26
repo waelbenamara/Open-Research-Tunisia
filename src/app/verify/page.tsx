@@ -12,7 +12,7 @@ async function verify(formData: FormData) {
 
 export default function VerifyPage() {
   return (
-    <div className="mx-auto w-full max-w-[480px] px-8 py-20">
+    <div className="mx-auto w-full max-w-[480px] px-4 sm:px-8 py-20">
       <div className="eyebrow mb-3">Certificate verification</div>
       <h1 className="font-serif text-[30px] font-medium leading-tight">
         Check that a certificate is real.

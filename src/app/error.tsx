@@ -12,7 +12,7 @@ export default function ErrorPage({
   const forbidden = error.message === "FORBIDDEN" || error.message === "UNAUTHENTICATED";
 
   return (
-    <div className="mx-auto w-full max-w-[520px] px-8 py-24 text-center">
+    <div className="mx-auto w-full max-w-[520px] px-4 sm:px-8 py-24 text-center">
       <div className="eyebrow mb-3">{forbidden ? "Not allowed" : "Something broke"}</div>
       <h1 className="font-serif text-[30px] font-medium">
         {forbidden

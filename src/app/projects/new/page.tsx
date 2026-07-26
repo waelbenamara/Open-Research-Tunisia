@@ -14,7 +14,7 @@ export default async function NewProjectPage() {
 
   if (!canCreateProject(user)) {
     return (
-      <div className="mx-auto w-full max-w-[560px] px-8 py-20 text-center">
+      <div className="mx-auto w-full max-w-[560px] px-4 sm:px-8 py-20 text-center">
         <h1 className="font-serif text-[28px] font-medium">You need posting rights first</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-ink-3">
           Posting a project means taking responsibility for other people&apos;s time, so an admin
@@ -33,7 +33,7 @@ export default async function NewProjectPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-7">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-7">
       <Breadcrumb href="/" label="Discover" current="New project" />
       <h1 className="font-serif text-[32px] font-medium">Post a research project</h1>
       <p className="mb-9 mt-1.5 max-w-[62ch] text-[15px] leading-relaxed text-ink-3 pretty">

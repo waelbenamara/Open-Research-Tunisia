@@ -15,7 +15,7 @@ export default async function RequestPostingRightsPage() {
 
   if (user.canPostProjects || user.role === "ADMIN") {
     return (
-      <div className="mx-auto w-full max-w-[560px] px-8 py-20 text-center">
+      <div className="mx-auto w-full max-w-[560px] px-4 sm:px-8 py-20 text-center">
         <h1 className="font-serif text-[28px] font-medium">You already have posting rights</h1>
         <p className="mt-3 text-[15px] text-ink-3">
           Go ahead and <Link href="/projects/new">post a project</Link> or{" "}
@@ -31,7 +31,7 @@ export default async function RequestPostingRightsPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-[600px] px-8 pb-24 pt-16">
+    <div className="mx-auto w-full max-w-[600px] px-4 sm:px-8 pb-24 pt-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
         Become a project lead
       </div>

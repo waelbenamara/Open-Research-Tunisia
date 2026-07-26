@@ -72,20 +72,20 @@ export function PostCard({
         </div>
       ) : null}
 
-      {/* Images — a single photo keeps its natural shape (no cropping); multiple
-          photos tile in a clean grid. */}
+      {/* Images — a single photo fills the post width and the card grows to its
+          natural height (no bars, no cropping); multiple photos tile in a grid. */}
       {post.images.length === 1 ? (
         <a
           href={`/api/feed/images/${post.images[0].id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 flex justify-center bg-sand/40"
+          className="mt-3 block"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/feed/images/${post.images[0].id}`}
             alt="Photo"
-            className="max-h-[660px] w-auto max-w-full object-contain"
+            className="block h-auto w-full"
           />
         </a>
       ) : post.images.length > 1 ? (

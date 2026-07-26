@@ -27,7 +27,7 @@ export default async function EditWorkshopPage({
   if (!(await canManageWorkshop(workshop.facilitatorId, user))) redirect(`/workshops/${slug}`);
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-7">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-7">
       <Breadcrumb href={`/workshops/${slug}`} label={workshop.title} current="Edit" />
       <h1 className="mb-8 font-serif text-[32px] font-medium">Edit workshop</h1>
 

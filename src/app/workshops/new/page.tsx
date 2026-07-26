@@ -14,7 +14,7 @@ export default async function NewWorkshopPage() {
 
   if (!canCreateProject(user)) {
     return (
-      <div className="mx-auto w-full max-w-[560px] px-8 py-20 text-center">
+      <div className="mx-auto w-full max-w-[560px] px-4 sm:px-8 py-20 text-center">
         <h1 className="font-serif text-[28px] font-medium">You need posting rights first</h1>
         <p className="mt-5">
           <Link href="/request-posting-rights">Request posting rights →</Link>
@@ -30,7 +30,7 @@ export default async function NewWorkshopPage() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-7">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-7">
       <Breadcrumb href="/" label="Discover" current="New workshop" />
       <h1 className="font-serif text-[32px] font-medium">Run a workshop</h1>
       <p className="mb-9 mt-1.5 max-w-[62ch] text-[15px] leading-relaxed text-ink-3 pretty">

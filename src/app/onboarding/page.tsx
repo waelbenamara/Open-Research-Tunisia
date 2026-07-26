@@ -55,7 +55,7 @@ export default async function OnboardingPage() {
   const allDone = doneCount === 3;
 
   return (
-    <div className="mx-auto w-full max-w-[860px] px-8 pb-24 pt-16">
+    <div className="mx-auto w-full max-w-[860px] px-4 sm:px-8 pb-24 pt-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
         Welcome, {user.name.split(" ")[0]}
       </div>

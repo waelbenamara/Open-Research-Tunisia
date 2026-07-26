@@ -119,7 +119,7 @@ export function SectionLabel({ children, className = "" }: { children: ReactNode
 
 export function Shell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`animate-fade-up mx-auto w-full max-w-[1200px] px-8 ${className}`}>
+    <div className={`animate-fade-up mx-auto w-full max-w-[1200px] px-4 sm:px-8 ${className}`}>
       {children}
     </div>
   );

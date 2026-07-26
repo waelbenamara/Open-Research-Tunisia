@@ -57,7 +57,7 @@ const SECTIONS: [string, string[]][] = [
 
 export default function CodeOfConductPage() {
   return (
-    <div className="mx-auto w-full max-w-[720px] px-8 pb-24 pt-16">
+    <div className="mx-auto w-full max-w-[720px] px-4 sm:px-8 pb-24 pt-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
         Community standards
       </div>

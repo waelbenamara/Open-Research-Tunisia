@@ -28,7 +28,7 @@ export default async function LoginPage({
   const { next, error } = await searchParams;
 
   return (
-    <div className="mx-auto w-full max-w-[440px] px-8 py-16">
+    <div className="mx-auto w-full max-w-[440px] px-4 sm:px-8 py-16">
       <div className="mb-8">
         <div className="eyebrow mb-2" style={{ color: "#8a3325" }}>
           Welcome back

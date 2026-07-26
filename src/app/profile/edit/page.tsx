@@ -15,7 +15,7 @@ export default async function EditProfilePage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-8 pb-24 pt-7">
+    <div className="mx-auto w-full max-w-[720px] px-4 sm:px-8 pb-24 pt-7">
       <Breadcrumb href="/profile" label="My profile" current="Edit" />
       <h1 className="font-serif text-[30px] font-medium">Edit profile</h1>
       <p className="mb-8 mt-1.5 max-w-[60ch] text-[14px] leading-relaxed text-ink-4 pretty">

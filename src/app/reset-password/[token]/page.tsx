@@ -23,7 +23,7 @@ export default async function ResetPasswordPage({
   const valid = !!row && row.expiresAt >= new Date();
 
   return (
-    <div className="mx-auto w-full max-w-[440px] px-8 py-16">
+    <div className="mx-auto w-full max-w-[440px] px-4 sm:px-8 py-16">
       <div className="mb-8">
         <div className="eyebrow mb-2" style={{ color: "#8a3325" }}>
           Account recovery

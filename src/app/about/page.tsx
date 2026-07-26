@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto w-full max-w-[760px] px-8 pb-24 pt-16">
+    <div className="mx-auto w-full max-w-[760px] px-4 sm:px-8 pb-24 pt-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
         An open initiative · Est. 2026
       </div>

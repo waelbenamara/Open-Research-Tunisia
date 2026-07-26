@@ -19,7 +19,7 @@ export default async function AcceptTermsPage() {
   if (user?.cocAcceptedAt) redirect("/onboarding");
 
   return (
-    <div className="mx-auto w-full max-w-[560px] px-8 py-16">
+    <div className="mx-auto w-full max-w-[560px] px-4 sm:px-8 py-16">
       <div className="eyebrow mb-2.5" style={{ color: "#8a3325" }}>
         Welcome, {session.name.split(" ")[0]}
       </div>
