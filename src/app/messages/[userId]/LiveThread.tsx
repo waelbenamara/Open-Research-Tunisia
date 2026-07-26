@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { markThreadReadAction } from "@/actions/messages";
 import { Avatar } from "@/components/ui";
+import { CameraCapture } from "@/components/CameraCapture";
 import { dateTime, fileSize, lastSeen as fmtLastSeen } from "@/lib/format";
 
 type Att = { id: string; filename: string; ext: string; size: number };
@@ -56,11 +57,11 @@ export function LiveThread({
   const [error, setError] = useState<string | null>(null);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   const mediaRef = useRef<HTMLInputElement>(null);
   const lastTypingSent = useRef(0);
   const cursor = useRef<string>(initialMessages[initialMessages.length - 1]?.id ?? "");
@@ -398,7 +399,7 @@ export function LiveThread({
                     label="Take photo"
                     onClick={() => {
                       setShowAttach(false);
-                      cameraRef.current?.click();
+                      setShowCamera(true);
                     }}
                   />
                   <AttachOption
@@ -446,8 +447,6 @@ export function LiveThread({
               >
                 😊
               </button>
-              <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden
-                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
               <input ref={mediaRef} type="file" accept="image/*,video/*" multiple hidden
                 onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
               <input ref={fileRef} type="file" multiple hidden
@@ -491,6 +490,14 @@ export function LiveThread({
           ) : null}
         </div>
       )}
+
+      {showCamera ? (
+        <CameraCapture
+          onCapture={(file) => setPending((prev) => [...prev, file].slice(0, 10))}
+          onClose={() => setShowCamera(false)}
+          onFallback={() => mediaRef.current?.click()}
+        />
+      ) : null}
     </div>
   );
 }
