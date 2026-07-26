@@ -7,6 +7,7 @@ import { addOpeningAction, toggleOpeningAction } from "@/actions/projects";
 import { Breadcrumb, Card, Field, SectionLabel } from "@/components/ui";
 import { Details } from "@/components/Collapse";
 import { ProjectForm } from "@/components/ProjectForm";
+import { DeleteProject } from "@/components/DeleteProject";
 
 export const metadata = { title: "Edit project" };
 
@@ -21,12 +22,17 @@ export default async function EditProjectPage({
 
   const project = await db.project.findUnique({
     where: { slug },
-    include: { openings: { orderBy: { isOpen: "desc" } } },
+    include: {
+      openings: { orderBy: { isOpen: "desc" } },
+      _count: { select: { members: true, contributions: true } },
+    },
   });
   if (!project) notFound();
 
   const access = await getProjectAccess(project.id, project.leadId, user);
   if (!access.canManage) redirect(`/projects/${slug}`);
+  // Deleting is heavier than editing — lead or admin only, not maintainers.
+  const canDelete = access.isLead || access.isAdmin;
 
   const workshops = await db.workshop.findMany({
     select: { id: true, title: true },
@@ -118,6 +124,18 @@ export default async function EditProjectPage({
           ))}
         </div>
       </div>
+
+      {canDelete ? (
+        <div className="mt-12 border-t border-line pt-9">
+          <SectionLabel>Danger zone</SectionLabel>
+          <DeleteProject
+            projectId={project.id}
+            title={project.title}
+            members={project._count.members}
+            contributions={project._count.contributions}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

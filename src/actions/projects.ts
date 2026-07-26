@@ -256,6 +256,54 @@ export async function updateProjectAction(
   };
 }
 
+/** Permanently delete a project. The lead or an admin only, guarded by a
+ *  typed-title confirmation because it cascades away everything in it. */
+export async function deleteProjectAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const user = await requireUser();
+  const projectId = String(formData.get("projectId"));
+  const confirmTitle = String(formData.get("confirmTitle") || "").trim();
+
+  const project = await db.project.findUnique({
+    where: { id: projectId },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      leadId: true,
+      resources: { select: { filePath: true } },
+      outputs: { select: { filePath: true } },
+      members: { select: { userId: true } },
+    },
+  });
+  if (!project) return { error: "Project not found." };
+  if (user.role !== "ADMIN" && project.leadId !== user.id) throw new Error("FORBIDDEN");
+  if (confirmTitle !== project.title) {
+    return { error: "Type the project title exactly to confirm deletion." };
+  }
+
+  // Cascade removes the DB rows; uploaded files must be cleared separately.
+  for (const r of project.resources) await deleteObject(r.filePath);
+  for (const o of project.outputs) await deleteObject(o.filePath);
+
+  const memberIds = project.members.map((m) => m.userId).filter((id) => id !== user.id);
+  await db.project.delete({ where: { id: projectId } });
+
+  await notify(memberIds, {
+    type: "PROJECT_DELETED",
+    title: `Project deleted: ${project.title}`,
+    body: "A project you were part of was deleted by its lead or an administrator.",
+    link: "/",
+  });
+  await audit(user.id, "PROJECT_DELETE", "Project", projectId, project.title);
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  redirect("/");
+}
+
 export async function setProjectStageAction(formData: FormData) {
   const projectId = String(formData.get("projectId"));
   const stage = String(formData.get("stage"));
