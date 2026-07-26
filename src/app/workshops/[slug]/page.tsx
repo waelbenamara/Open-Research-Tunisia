@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canManageWorkshop } from "@/lib/permissions";
-import { avatarSrc, dateTime, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
+import { avatarSrc, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
 import { LiveSessionBanner } from "./LiveSessionBanner";
 import { SessionManage } from "./SessionManage";
+import { LocalDateTime } from "@/components/LocalDateTime";
 import { RESOURCE_KINDS } from "@/lib/enums";
 import {
   Avatar,
@@ -274,7 +275,7 @@ export default async function WorkshopPage({
                             <div className="min-w-0 flex-1">
                               <div className="text-[14.5px] font-semibold">{s.title}</div>
                               <div className="mt-0.5 text-[12.5px] text-muted">
-                                {dateTime(s.scheduledAt)} · {s.durationMin} min
+                                <LocalDateTime iso={s.scheduledAt.toISOString()} withTz /> · {s.durationMin} min
                               </div>
                               {s.description ? (
                                 <div className="mt-1 text-[13px] leading-[1.5] text-ink-4">
