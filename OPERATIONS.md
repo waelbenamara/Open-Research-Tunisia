@@ -74,6 +74,19 @@ in **Vercel → Settings → Environment Variables**.
 
 `DATABASE_URL` · `DIRECT_URL` · `AUTH_SECRET` · `RESEND_API_KEY` · `EMAIL_FROM`
 · `SUPABASE_URL` · `SUPABASE_SERVICE_ROLE_KEY` · `SUPABASE_STORAGE_BUCKET`
+· `CRON_SECRET`
+
+> **`CRON_SECRET`** secures the daily digest endpoint (`/api/cron/digest`). Set
+> it in Vercel; Vercel Cron sends it automatically as a Bearer token. Its value
+> is in `env copy`. Without it the endpoint is open — fine locally, not in prod.
+
+### Activity emails & the digest
+
+Beyond transactional mail, the platform sends **activity emails**, which every
+member can turn off from their profile ("Email me about activity"):
+
+- **First message** — when someone new messages you, you get one email. Replies are in-app only.
+- **Digest** — a Vercel Cron job (`vercel.json`, daily at 08:00 UTC) runs `/api/cron/digest`, which emails each person **at most once every ~2 days**, and only if they have unread activity worth surfacing. An engaged user who reads everything gets nothing.
 
 ---
 

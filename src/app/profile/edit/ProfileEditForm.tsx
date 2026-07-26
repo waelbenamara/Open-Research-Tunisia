@@ -22,9 +22,11 @@ type Values = {
 export function ProfileEditForm({
   user,
   avatar,
+  emailUpdates,
 }: {
   user: Values;
   avatar: { src: string | null; color: string; hasUpload: boolean };
+  emailUpdates: boolean;
 }) {
   const [state, action, pending] = useActionState(updateProfileAction, null);
   // Local preview of a freshly chosen picture, before saving.
@@ -126,6 +128,24 @@ export function ProfileEditForm({
         <Field label="GitHub" hint="optional">
           <input name="github" defaultValue={user.github} placeholder="https://github.com/…" />
         </Field>
+      </div>
+
+      <div className="border-t border-line-soft pt-4">
+        <label className="flex cursor-pointer items-start gap-2.5 text-[14px] font-normal">
+          <input
+            type="checkbox"
+            name="emailUpdates"
+            defaultChecked={emailUpdates}
+            className="!w-auto mt-0.5"
+          />
+          <span>
+            Email me about activity
+            <span className="mt-0.5 block text-[12.5px] text-ink-4">
+              A note when someone new messages you, and a short summary of what concerns you every
+              couple of days. Password resets and application decisions always email you regardless.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="mt-2 flex justify-end">

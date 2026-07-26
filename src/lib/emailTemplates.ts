@@ -51,6 +51,8 @@ export type EmailTemplate = {
   cta?: { label: string; url: string };
   /** Small muted lines after the button — fallback link, expiry note. */
   afterCta?: string[];
+  /** An unnumbered list of events — the digest email's activity items. */
+  items?: { title: string; meta?: string }[];
   /** Why they received this — required, it's basic email courtesy. */
   footerNote: string;
 };
@@ -73,6 +75,22 @@ export function renderEmailHtml(t: EmailTemplate): string {
           <td valign="top" style="padding:12px 0 12px 6px; border-top:1px solid ${C.line};">
             <div style="font-family:${SANS}; font-size:14.5px; font-weight:700; color:${C.ink};">${esc(s.title)}</div>
             <div style="font-family:${SANS}; font-size:13.5px; line-height:1.6; color:${C.ink4}; margin-top:3px;">${esc(s.body)}</div>
+          </td>
+        </tr>`,
+          )
+          .join("")}
+      </table>`
+    : "";
+
+  const items = t.items?.length
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:4px 0 12px;">
+        ${t.items
+          .map(
+            (it) => `
+        <tr>
+          <td valign="top" style="padding:11px 0; border-top:1px solid ${C.line};">
+            <div style="font-family:${SANS}; font-size:14px; font-weight:600; color:${C.ink};">${esc(it.title)}</div>
+            ${it.meta ? `<div style="font-family:${SANS}; font-size:12.5px; color:${C.muted}; margin-top:2px;">${esc(it.meta)}</div>` : ""}
           </td>
         </tr>`,
           )
@@ -126,6 +144,7 @@ export function renderEmailHtml(t: EmailTemplate): string {
               ${t.greeting ? `<p style="margin:0 0 14px; font-family:${SANS}; font-size:15px; line-height:1.65; color:${C.ink3};">${esc(t.greeting)}</p>` : ""}
               ${paragraphs}
               ${steps}
+              ${items}
               ${cta}
               ${afterCta}
             </td>
@@ -154,6 +173,10 @@ export function renderEmailText(t: EmailTemplate): string {
   for (const p of t.paragraphs) lines.push(p, "");
   if (t.steps?.length) {
     for (const [i, s] of t.steps.entries()) lines.push(`${i + 1}. ${s.title}`, `   ${s.body}`, "");
+  }
+  if (t.items?.length) {
+    for (const it of t.items) lines.push(`• ${it.title}${it.meta ? ` (${it.meta})` : ""}`);
+    lines.push("");
   }
   if (t.cta) lines.push(`${t.cta.label}:`, t.cta.url, "");
   for (const p of t.afterCta ?? []) lines.push(p, "");

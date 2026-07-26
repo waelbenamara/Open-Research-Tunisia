@@ -312,6 +312,8 @@ export async function updateProfileAction(
       website: d.website || null,
       scholar: d.scholar || null,
       github: d.github || null,
+      // Unchecked checkbox is simply absent from the form data.
+      emailUpdates: formData.get("emailUpdates") === "on",
     },
   });
 

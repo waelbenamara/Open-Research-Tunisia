@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { avatarSrc, relativeTime } from "@/lib/format";
 import { Avatar, EmptyState, Shell } from "@/components/ui";
+import { NewMessage } from "./NewMessage";
 
 export const metadata = { title: "Messages" };
 
@@ -57,20 +58,20 @@ export default async function MessagesPage() {
 
   return (
     <Shell className="pb-24 pt-11">
-      <h1 className="font-serif text-[32px] font-medium">Messages</h1>
-      <p className="mb-8 mt-1 text-[14px] text-ink-4">
-        Private one-to-one conversations. Reach anyone from their profile.
-      </p>
+      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-[32px] font-medium">Messages</h1>
+          <p className="mt-1 text-[14px] text-ink-4">
+            Private one-to-one conversations with anyone on the platform.
+          </p>
+        </div>
+        <NewMessage />
+      </div>
 
       {conversations.length === 0 ? (
         <EmptyState
           title="No messages yet."
-          hint={
-            <>
-              Find someone in the <Link href="/people">people directory</Link> and start a
-              conversation.
-            </>
-          }
+          hint={<>Tap <strong>New message</strong> above to search for someone and say hello.</>}
         />
       ) : (
         <div className="flex flex-col border-t border-line">

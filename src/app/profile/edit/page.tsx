@@ -25,6 +25,7 @@ export default async function EditProfilePage() {
       </p>
       <ProfileEditForm
         avatar={{ src: avatarSrc(user), color: user.avatarColor, hasUpload: !!user.avatarPath }}
+        emailUpdates={user.emailUpdates}
         user={{
           name: user.name,
           headline: user.headline ?? "",

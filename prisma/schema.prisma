@@ -50,6 +50,11 @@ model User {
   // admins grant this; it is what unlocks "post a project"
   canPostProjects Boolean   @default(false)
   emailVerified   Boolean   @default(false)
+  /// Opt-in (default) to activity emails: first message from a new person, and
+  /// the periodic digest. Transactional mail (reset, decisions) ignores this.
+  emailUpdates    Boolean   @default(true)
+  /// When the last activity digest was sent, for per-user throttling.
+  lastDigestAt    DateTime?
   suspended       Boolean   @default(false)
   cocAcceptedAt   DateTime?
   createdAt       DateTime  @default(now())
