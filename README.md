@@ -20,7 +20,14 @@ npm run dev               # http://localhost:3000
 
 `npm run db:reset` wipes and reseeds. `npm run db:studio` opens a data browser.
 
-### Seeded accounts — password `password123`
+### Seeded accounts — **local development only**
+
+> ⚠️ These accounts exist **only** in a locally seeded database (`npm run setup`).
+> They are **never** created in production — the live site is populated with real
+> data, and the login page's demo-account helper is gated to `NODE_ENV !== production`.
+> Do not treat `password123` as a live credential; it isn't one.
+
+Password for all seeded accounts: `password123`
 
 | Email | Who | What to look at |
 |---|---|---|

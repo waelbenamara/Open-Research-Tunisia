@@ -1,0 +1,371 @@
+<title>Open Research Tunisia — Operations Guide</title>
+<style>
+  :root {
+    --paper: #faf8f3;
+    --card: #fffefb;
+    --sand: #f4f0e6;
+    --tint: #f2eee3;
+    --ink: #211d16;
+    --ink-2: #3d3729;
+    --ink-3: #57503f;
+    --ink-4: #6e675a;
+    --muted: #9a927f;
+    --line: #e6dfd0;
+    --line-soft: #efe9dc;
+    --line-strong: #c9bda4;
+    --brick: #8a3325;
+    --brick-tint: #f7ece8;
+    --olive: #4d6b3c;
+    --olive-tint: #e4ecdb;
+    --gold: #7a5b16;
+    --gold-tint: #f4ead2;
+    --shadow: 0 1px 0 rgba(33,29,22,.03), 0 8px 28px -20px rgba(33,29,22,.22);
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  :where([data-dark]) { }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1a1611;
+      --card: #221d16;
+      --sand: #262019;
+      --tint: #2b241c;
+      --ink: #f1ece1;
+      --ink-2: #e0d9cb;
+      --ink-3: #c3baa9;
+      --ink-4: #a89f8d;
+      --muted: #8a8171;
+      --line: #372f25;
+      --line-soft: #2f281f;
+      --line-strong: #4a4133;
+      --brick: #d98a76;
+      --brick-tint: #3a241d;
+      --olive: #a3c186;
+      --olive-tint: #26301c;
+      --gold: #d8b25f;
+      --gold-tint: #332a15;
+      --shadow: 0 1px 0 rgba(0,0,0,.2), 0 10px 30px -20px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1a1611; --card: #221d16; --sand: #262019; --tint: #2b241c;
+    --ink: #f1ece1; --ink-2: #e0d9cb; --ink-3: #c3baa9; --ink-4: #a89f8d; --muted: #8a8171;
+    --line: #372f25; --line-soft: #2f281f; --line-strong: #4a4133;
+    --brick: #d98a76; --brick-tint: #3a241d; --olive: #a3c186; --olive-tint: #26301c;
+    --gold: #d8b25f; --gold-tint: #332a15;
+    --shadow: 0 1px 0 rgba(0,0,0,.2), 0 10px 30px -20px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"] {
+    --paper: #faf8f3; --card: #fffefb; --sand: #f4f0e6; --tint: #f2eee3;
+    --ink: #211d16; --ink-2: #3d3729; --ink-3: #57503f; --ink-4: #6e675a; --muted: #9a927f;
+    --line: #e6dfd0; --line-soft: #efe9dc; --line-strong: #c9bda4;
+    --brick: #8a3325; --brick-tint: #f7ece8; --olive: #4d6b3c; --olive-tint: #e4ecdb;
+    --gold: #7a5b16; --gold-tint: #f4ead2;
+    --shadow: 0 1px 0 rgba(33,29,22,.03), 0 8px 28px -20px rgba(33,29,22,.22);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 64px 28px 96px; }
+
+  .eyebrow {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--brick); margin: 0 0 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .eyebrow::before {
+    content: ""; width: 9px; height: 9px; background: var(--brick); display: inline-block;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(34px, 5vw, 46px);
+    line-height: 1.08; margin: 0 0 14px; text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .dek {
+    font-size: 17px; line-height: 1.6; color: var(--ink-3); max-width: 62ch;
+    margin: 0; text-wrap: pretty;
+  }
+  .dek strong { color: var(--ink); font-weight: 600; }
+
+  section { margin-top: 56px; }
+  h2 {
+    font-family: var(--serif); font-weight: 500; font-size: 25px; margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sec-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 18px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  p { margin: 0 0 14px; color: var(--ink-3); }
+  p.lead-in { max-width: 64ch; }
+  a { color: var(--brick); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover { border-bottom-color: currentColor; }
+  strong { color: var(--ink); }
+  code {
+    font-family: var(--mono); font-size: 0.86em; background: var(--tint);
+    border: 1px solid var(--line-soft); padding: 1px 6px; color: var(--ink-2);
+    white-space: nowrap;
+  }
+
+  /* Status board */
+  .board { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px; }
+  @media (min-width: 620px) { .board { grid-template-columns: repeat(4, 1fr); } }
+  .tile {
+    background: var(--card); border: 1px solid var(--line); padding: 16px 16px 15px;
+    box-shadow: var(--shadow);
+  }
+  .tile .role { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .tile .svc { font-family: var(--serif); font-size: 19px; margin: 5px 0 9px; color: var(--ink); }
+  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .dot.live { background: var(--olive); box-shadow: 0 0 0 3px var(--olive-tint); }
+  .dot.pending { background: var(--gold); box-shadow: 0 0 0 3px var(--gold-tint); }
+  .status.live { color: var(--olive); }
+  .status.pending { color: var(--gold); }
+
+  /* Tables */
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 8px; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); padding: 0 16px 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 16px 11px 0; border-bottom: 1px solid var(--line-soft); color: var(--ink-3); vertical-align: top; }
+  td:first-child { color: var(--ink); }
+  tr:last-child td { border-bottom: none; }
+  .chip {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    padding: 2px 9px; text-transform: uppercase;
+  }
+  .chip.admin { background: var(--brick); color: var(--paper); }
+  .chip.lead { background: var(--olive-tint); color: var(--olive); border: 1px solid var(--olive); }
+
+  /* Definition list for /admin tabs */
+  .defs { display: flex; flex-direction: column; gap: 0; }
+  .def { display: grid; grid-template-columns: 150px 1fr; gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--line-soft); }
+  .def:last-child { border-bottom: none; }
+  .def dt { font-weight: 600; color: var(--ink); font-size: 14.5px; }
+  .def dd { margin: 0; color: var(--ink-3); font-size: 14px; }
+  @media (max-width: 560px) { .def { grid-template-columns: 1fr; gap: 3px; } }
+
+  /* Callout / note */
+  .note {
+    border-left: 3px solid var(--brick); background: var(--brick-tint);
+    padding: 14px 18px; margin: 18px 0; font-size: 14px; color: var(--ink-2);
+  }
+  .note strong { color: var(--ink); }
+
+  /* Code block */
+  pre {
+    font-family: var(--mono); font-size: 13px; background: var(--sand);
+    border: 1px solid var(--line); padding: 16px 18px; overflow-x: auto;
+    color: var(--ink-2); margin: 8px 0 16px; line-height: 1.5;
+  }
+  pre .cmt { color: var(--muted); }
+  .envlist { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0 0; }
+  .envlist code { white-space: nowrap; }
+
+  /* Numbered steps — used only where order is real */
+  ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+  ol.steps > li {
+    counter-increment: s; position: relative; padding: 0 0 18px 46px; margin: 0;
+    color: var(--ink-3); font-size: 14.5px;
+  }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: -2px;
+    font-family: var(--serif); font-size: 22px; font-weight: 500; color: var(--brick);
+    width: 30px; text-align: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 15px; top: 26px; bottom: 4px; width: 1px; background: var(--line);
+  }
+  ol.steps strong { color: var(--ink); }
+
+  /* Caveats with severity */
+  .caveats { display: flex; flex-direction: column; gap: 12px; }
+  .caveat { display: grid; grid-template-columns: 96px 1fr; gap: 16px; align-items: start;
+    background: var(--card); border: 1px solid var(--line); border-left-width: 3px; padding: 14px 16px; }
+  .caveat.high { border-left-color: var(--brick); }
+  .caveat.med { border-left-color: var(--gold); }
+  .sev { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px; }
+  .caveat.high .sev { color: var(--brick); }
+  .caveat.med .sev { color: var(--gold); }
+  .caveat .body { font-size: 14px; color: var(--ink-3); }
+  .caveat .body b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 520px) { .caveat { grid-template-columns: 1fr; gap: 4px; } }
+
+  ul.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 11px; }
+  ul.plain li { padding-left: 20px; position: relative; font-size: 14.5px; color: var(--ink-3); }
+  ul.plain li::before { content: "→"; position: absolute; left: 0; color: var(--brick); font-weight: 700; }
+  ul.plain b { color: var(--ink); font-weight: 600; }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--muted);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Operations Guide · Production</p>
+  <h1>Running Open Research Tunisia</h1>
+  <p class="dek">
+    The practical manual for keeping the live platform going. If you read one line:
+    <strong>you deploy by pushing to <code>main</code>, and people are managed from <code>/admin</code>.</strong>
+  </p>
+
+  <section>
+    <p class="sec-label">System status</p>
+    <div class="board">
+      <div class="tile">
+        <div class="role">App</div>
+        <div class="svc">Vercel</div>
+        <span class="status live"><span class="dot live"></span>Live</span>
+      </div>
+      <div class="tile">
+        <div class="role">Database</div>
+        <div class="svc">Supabase</div>
+        <span class="status live"><span class="dot live"></span>Live</span>
+      </div>
+      <div class="tile">
+        <div class="role">Email</div>
+        <div class="svc">Resend</div>
+        <span class="status live"><span class="dot live"></span>Verified</span>
+      </div>
+      <div class="tile">
+        <div class="role">Domain</div>
+        <div class="svc">.org</div>
+        <span class="status pending"><span class="dot pending"></span>DNS pending</span>
+      </div>
+    </div>
+    <p style="margin-top:18px" class="lead-in">
+      Everything is <strong>cloud-hosted</strong> — there's no home server in the live path. The app runs on
+      Vercel (Next.js 15, auto-deployed from GitHub <code>main</code>); the database and uploaded files live in
+      Supabase; email goes through Resend from the verified <code>openresearchtunisia.org</code> domain. Local
+      development runs fully offline on the same code — the environment picks the backend.
+    </p>
+  </section>
+
+  <section>
+    <h2>Admin accounts</h2>
+    <p class="sec-label">Who can reach the console</p>
+    <p class="lead-in">
+      These are the real people with access to <code>/admin</code>. There is
+      <strong>no <code>password123</code> account in production</strong> — those belong to local development only,
+      and the login page's demo helper is now hidden on the live site.
+    </p>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Email</th><th>Role</th><th>Signs in with</th></tr></thead>
+        <tbody>
+          <tr><td><code>benamara@umich.edu</code></td><td><span class="chip admin">Admin</span> owner</td><td>Password</td></tr>
+          <tr><td><code>mootez@dal.ca</code></td><td><span class="chip admin">Admin</span></td><td>Password</td></tr>
+          <tr><td><code>researchtunisia5@gmail.com</code></td><td><span class="chip admin">Admin</span></td><td>Forgot-password link, or Google</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      An account with no password isn't locked out. <strong>"Forgot password?"</strong> on the sign-in page
+      emails a real reset link (via Resend) that also sets the password — and signing in with Google on the
+      same address links automatically.
+    </div>
+  </section>
+
+  <section>
+    <h2>Running it day to day</h2>
+    <p class="sec-label">Everything from the /admin console</p>
+    <dl class="defs">
+      <div class="def"><dt>Applications</dt><dd>Every project application. Admins can decide when a lead goes quiet.</dd></div>
+      <div class="def"><dt>Posting requests</dt><dd>Approve who may post projects — granting posting rights and the Lead role.</dd></div>
+      <div class="def"><dt>Projects</dt><dd><strong>Approve or reject submitted projects.</strong> A new non-admin project stays invisible to the public until approved; rejecting it (with a note) sends it back to its lead to edit and resubmit.</dd></div>
+      <div class="def"><dt>Workshops</dt><dd>Oversee every workshop on the platform.</dd></div>
+      <div class="def"><dt>Members</dt><dd>Change roles, suspend or reinstate accounts, and open anyone's <strong>Activity</strong> page — sign-in history, full action trail, contributions, applications, enrolments.</dd></div>
+      <div class="def"><dt>Audit log</dt><dd>Every meaningful action across the platform, newest first.</dd></div>
+    </dl>
+    <ul class="plain" style="margin-top:18px">
+      <li><b>Make someone an admin</b> — Members tab → their card → set role to Admin.</li>
+      <li><b>Suspend an account</b> — Members tab → Suspend. This also ends their live sessions immediately.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Deploying changes</h2>
+    <p class="sec-label">Push to main — nothing else</p>
+    <pre><span class="cmt"># Vercel watches main and rebuilds automatically.</span>
+git push origin main</pre>
+    <p class="lead-in">
+      The build runs <code>prisma migrate deploy</code>, so <strong>new database migrations apply themselves on
+      every deploy</strong> — there's no separate database step. A green check in the Vercel dashboard means it's
+      live.
+    </p>
+    <div class="note">
+      <strong>Never commit secrets.</strong> <code>.env</code> and <code>env&nbsp;copy</code> are gitignored, and
+      GitHub push protection blocks any push containing a key. Production secrets live only in
+      <strong>Vercel → Settings → Environment Variables</strong>:
+      <div class="envlist">
+        <code>DATABASE_URL</code><code>DIRECT_URL</code><code>AUTH_SECRET</code><code>RESEND_API_KEY</code><code>EMAIL_FROM</code><code>SUPABASE_URL</code><code>SUPABASE_SERVICE_ROLE_KEY</code><code>SUPABASE_STORAGE_BUCKET</code>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Putting it on openresearchtunisia.org</h2>
+    <p class="sec-label">A real sequence — do it in order</p>
+    <p class="lead-in">The site currently answers on its <code>*.vercel.app</code> address. To move it to the real domain — no Cloudflare account needed:</p>
+    <ol class="steps">
+      <li><strong>Vercel</strong> → Project → Settings → <strong>Domains</strong> → add <code>openresearchtunisia.org</code> and <code>www.openresearchtunisia.org</code>.</li>
+      <li><strong>Namecheap</strong> → Advanced DNS → remove the parking CNAME and any URL-redirect record, then add exactly what Vercel shows: usually an <strong>A record</strong> <code>@ → 76.76.21.21</code> and a <strong>CNAME</strong> <code>www → cname.vercel-dns.com</code>.</li>
+      <li><strong>Leave the Resend records untouched</strong> — <code>resend._domainkey</code>, the <code>send</code> TXT + MX, and <code>_dmarc</code>. HTTPS is issued automatically.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Known limits — read before launch</h2>
+    <p class="sec-label">What to plan around</p>
+    <div class="caveats">
+      <div class="caveat high">
+        <div class="sev">Important</div>
+        <div class="body"><b>Uploads over ~4.5 MB fail on Vercel</b> — a hard platform cap on request size. Existing large files (like the intro presentation) serve fine; it only blocks <i>new</i> uploads above the limit. The fix, if it becomes essential, is direct browser-to-Supabase uploads.</div>
+      </div>
+      <div class="caveat high">
+        <div class="sev">Important</div>
+        <div class="body"><b>Supabase free tier pauses after ~1 week idle</b> — the database sleeps and the site errors until manually resumed. Upgrade to <b>Pro ($25/mo)</b> before public launch, for no-pausing and daily backups.</div>
+      </div>
+      <div class="caveat med">
+        <div class="sev">Note</div>
+        <div class="body"><b>HTML presentations must be self-contained</b> — all assets embedded, as Manim Slides exports by default. They're served inside a security sandbox.</div>
+      </div>
+      <div class="caveat med">
+        <div class="sev">Note</div>
+        <div class="body"><b>No rate limiting yet</b> on login or application submission.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>When something breaks</h2>
+    <p class="sec-label">Fast paths</p>
+    <ul class="plain">
+      <li><b>Someone can't sign in</b> → have them use <i>Forgot password</i> on the login page.</li>
+      <li><b>Abusive account</b> → Members tab → Suspend (revokes their sessions at once).</li>
+      <li><b>Bad deploy</b> → Vercel → Deployments → open the last good one → Promote to Production. Instant rollback.</li>
+      <li><b>Figure out what happened</b> → <code>/admin</code> → Audit log, or a person's Activity page.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Open Research Tunisia · Operations Guide. Keep it current — this is the map when something breaks at an
+    inconvenient hour. Mirrored in <code>OPERATIONS.md</code> in the repository.
+  </footer>
+
+</div>

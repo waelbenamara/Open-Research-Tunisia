@@ -48,21 +48,25 @@ export default async function LoginPage({
         New here? <Link href="/register">Create an account</Link> — it takes a minute and it&apos;s free.
       </div>
 
-      <div className="mt-8 border border-line bg-tint px-5 py-4 text-[12.5px] leading-relaxed text-ink-4">
-        <div className="mb-1.5 font-semibold text-ink">Demo accounts (seeded)</div>
-        <div>
-          <code>admin@ort.tn</code> · admin console
+      {/* Seeded-account helper — DEV ONLY. Never rendered in production, so
+          demo credentials can't leak on the live site. */}
+      {process.env.NODE_ENV !== "production" ? (
+        <div className="mt-8 border border-line bg-tint px-5 py-4 text-[12.5px] leading-relaxed text-ink-4">
+          <div className="mb-1.5 font-semibold text-ink">Demo accounts (local dev only)</div>
+          <div>
+            <code>admin@ort.tn</code> · admin console
+          </div>
+          <div>
+            <code>amine@ort.tn</code> · project lead
+          </div>
+          <div>
+            <code>yasmine@ort.tn</code> · contributor
+          </div>
+          <div className="mt-1.5">
+            Password for all: <code>password123</code>
+          </div>
         </div>
-        <div>
-          <code>amine@ort.tn</code> · project lead
-        </div>
-        <div>
-          <code>yasmine@ort.tn</code> · contributor
-        </div>
-        <div className="mt-1.5">
-          Password for all: <code>password123</code>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }
