@@ -72,24 +72,31 @@ export function PostCard({
         </div>
       ) : null}
 
-      {/* Images */}
-      {post.images.length > 0 ? (
-        <div className={`mt-3 ${post.images.length === 1 ? "" : "grid grid-cols-2 gap-1"} px-0`}>
+      {/* Images — a single photo keeps its natural shape (no cropping); multiple
+          photos tile in a clean grid. */}
+      {post.images.length === 1 ? (
+        <a
+          href={`/api/feed/images/${post.images[0].id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 flex justify-center bg-sand/40"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/feed/images/${post.images[0].id}`}
+            alt="Photo"
+            className="max-h-[660px] w-auto max-w-full object-contain"
+          />
+        </a>
+      ) : post.images.length > 1 ? (
+        <div className="mt-3 grid grid-cols-2 gap-1">
           {post.images.map((img, i) => {
             const src = `/api/feed/images/${img.id}`;
-            const spanFull = post.images.length > 1 && post.images.length % 2 === 1 && i === post.images.length - 1;
+            const spanFull = post.images.length % 2 === 1 && i === post.images.length - 1;
             return (
               <a key={img.id} href={src} target="_blank" rel="noopener noreferrer" className={spanFull ? "col-span-2" : ""}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={src}
-                  alt={`Photo ${i + 1}`}
-                  className={
-                    post.images.length === 1
-                      ? "max-h-[540px] w-full object-cover"
-                      : "aspect-video w-full object-cover"
-                  }
-                />
+                <img src={src} alt={`Photo ${i + 1}`} className="aspect-video w-full object-cover" />
               </a>
             );
           })}

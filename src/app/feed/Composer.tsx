@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import { createPostAction } from "@/actions/feed";
 import { compressImage } from "@/lib/compressImage";
 
@@ -35,6 +36,24 @@ export function Composer({
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 280)}px`;
+  }
+
+  function insertEmoji(emoji: string) {
+    setOpen(true);
+    const ta = taRef.current;
+    if (!ta) {
+      setBody((b) => b + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? body.length;
+    const end = ta.selectionEnd ?? body.length;
+    setBody(body.slice(0, start) + emoji + body.slice(end));
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+      grow();
+    });
   }
 
   async function addFiles(list: FileList | null) {
@@ -177,7 +196,8 @@ export function Composer({
                   e.target.value = "";
                 }}
               />
-              <span className="text-[11.5px] text-muted">Markdown supported</span>
+              <EmojiPicker onPick={insertEmoji} />
+              <span className="hidden text-[11.5px] text-muted sm:inline">Markdown supported</span>
             </div>
             <button
               type="button"

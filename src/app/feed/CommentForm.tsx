@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui";
+import { EmojiPicker } from "@/components/EmojiPicker";
 import { addCommentAction } from "@/actions/feed";
 
 export function CommentForm({
@@ -15,6 +16,23 @@ export function CommentForm({
   const router = useRouter();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function insertEmoji(emoji: string) {
+    const el = inputRef.current;
+    if (!el) {
+      setValue((v) => v + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? value.length;
+    const end = el.selectionEnd ?? value.length;
+    setValue(value.slice(0, start) + emoji + value.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
+  }
 
   async function submit() {
     const body = value.trim();
@@ -38,6 +56,7 @@ export function CommentForm({
     <div className="flex items-center gap-2 pt-1">
       <Avatar name={me.name} color={me.avatarColor} src={me.avatarSrc} size={28} />
       <input
+        ref={inputRef}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
@@ -50,6 +69,7 @@ export function CommentForm({
         aria-label="Write a comment"
         className="!m-0 flex-1 !rounded-full !border-line-input !bg-paper !py-2 !text-[13px]"
       />
+      <EmojiPicker onPick={insertEmoji} align="right" />
       <button
         type="button"
         onClick={submit}
