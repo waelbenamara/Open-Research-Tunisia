@@ -87,6 +87,7 @@ model User {
   sentMessages     DirectMessage[]   @relation("DMSender")
   receivedMessages DirectMessage[]   @relation("DMRecipient")
   createdEvents    ProjectEvent[]
+  apiKeys          ApiKey[]
   auditLogs        AuditLog[]
   bookmarks        Bookmark[]
   sessions         Session[]
@@ -116,6 +117,25 @@ model PasswordResetToken {
   tokenHash String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// A personal API key for programmatic access. Only the SHA-256 hash is stored
+/// (the raw `ort_…` token is shown once at creation). `scopes` is a CSV of
+/// "read"/"write". A request authenticates as this key's owner with their
+/// permissions.
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  hashedKey  String    @unique
+  prefix     String // first chars of the raw key, for display
+  scopes     String    @default("read,write")
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
 }

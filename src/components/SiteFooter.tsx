@@ -10,6 +10,7 @@ export function SiteFooter() {
         <div className="flex-1" />
         <Link href="/code-of-conduct">Code of conduct</Link>
         <Link href="/verify">Verify a certificate</Link>
+        <Link href="/developers">Developers</Link>
         <Link href="/about">About</Link>
       </div>
     </footer>

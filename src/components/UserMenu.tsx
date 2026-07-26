@@ -70,6 +70,9 @@ export function UserMenu({
           <Link href="/profile/edit" className={item} onClick={() => setOpen(false)}>
             Edit profile
           </Link>
+          <Link href="/settings/api-keys" className={item} onClick={() => setOpen(false)}>
+            API keys
+          </Link>
           {canPost || role === "ADMIN" ? (
             <>
               <Link href="/projects/new" className={item} onClick={() => setOpen(false)}>
