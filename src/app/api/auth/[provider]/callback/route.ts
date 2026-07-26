@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { audit } from "@/lib/notify";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/welcomeEmail";
+import { notifyAdminsOfNewMember } from "@/lib/newMemberAlert";
 import {
   fetchGithubProfile,
   fetchGoogleProfile,
@@ -73,6 +74,11 @@ export async function GET(
       if (profile.email) {
         await sendEmail(welcomeEmail(profile.name, profile.email.toLowerCase(), origin));
       }
+      await notifyAdminsOfNewMember(
+        { id: result.userId, name: profile.name, email: profile.email?.toLowerCase() ?? "" },
+        origin,
+        provider,
+      );
       return NextResponse.redirect(`${origin}/accept-terms`);
     }
 

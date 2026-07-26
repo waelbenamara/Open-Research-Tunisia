@@ -20,6 +20,7 @@ import { deleteObject, storeUpload } from "@/lib/storage";
 import { sendEmail } from "@/lib/email";
 import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
 import { welcomeEmail } from "@/lib/welcomeEmail";
+import { notifyAdminsOfNewMember } from "@/lib/newMemberAlert";
 
 export type ActionState = { error?: string; success?: string } | null;
 
@@ -78,7 +79,13 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     },
   });
 
-  await sendEmail(welcomeEmail(user.name, user.email, await requestOrigin()));
+  const origin = await requestOrigin();
+  await sendEmail(welcomeEmail(user.name, user.email, origin));
+  await notifyAdminsOfNewMember(
+    { id: user.id, name: user.name, email: user.email, affiliation: user.affiliation, city: user.city },
+    origin,
+    "password",
+  );
 
   await audit(user.id, "REGISTER", "User", user.id, "password");
   await createSession(user.id);
