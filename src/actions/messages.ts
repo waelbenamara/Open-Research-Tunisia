@@ -36,8 +36,9 @@ export async function sendDirectMessageAction(formData: FormData) {
     select: { id: true },
   });
 
-  await db.directMessage.create({
+  const created = await db.directMessage.create({
     data: { senderId: me.id, recipientId, body: body.slice(0, MAX_LEN) },
+    select: { id: true, createdAt: true },
   });
 
   await notify(recipientId, {
@@ -72,6 +73,9 @@ export async function sendDirectMessageAction(formData: FormData) {
 
   revalidatePath(`/messages/${recipientId}`);
   revalidatePath("/messages");
+  // Returned so the live thread can replace its optimistic bubble with the
+  // real row instead of showing both (the poll would otherwise duplicate it).
+  return { id: created.id, createdAt: created.createdAt.toISOString() };
 }
 
 /** Mark every message from `otherId` to me as read. */

@@ -47,11 +47,10 @@ export function LiveThread({
         if (!alive) return;
         if (Array.isArray(data.messages) && data.messages.length) {
           setMessages((prev) => {
-            const have = new Set(prev.map((m) => m.id));
-            const fresh = (data.messages as Msg[]).filter((m) => !have.has(m.id));
-            if (!fresh.length) return prev;
-            cursor.current = fresh[fresh.length - 1].id;
-            return [...prev, ...fresh];
+            const merged = mergeIncoming(prev, data.messages as Msg[]);
+            if (merged === prev) return prev;
+            cursor.current = (data.messages as Msg[])[data.messages.length - 1].id;
+            return merged;
           });
           setTimeout(() => scrollToBottom(), 30);
         }
@@ -94,9 +93,17 @@ export function LiveThread({
     fd.set("recipientId", other.id);
     fd.set("body", body);
     try {
-      await sendDirectMessageAction(fd);
-      // The next poll reconciles the real row; drop the temp if still present
-      // after a moment (it will be replaced by the server copy via cursor).
+      const res = await sendDirectMessageAction(fd);
+      // Replace the optimistic bubble with the real row (or drop it if the poll
+      // already brought the real one in), so it never shows twice.
+      if (res?.id) {
+        const real: Msg = { id: res.id, body, senderId: meId, createdAt: res.createdAt };
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === real.id)) return prev.filter((m) => m.id !== tempId);
+          return prev.map((m) => (m.id === tempId ? real : m));
+        });
+        cursor.current = res.id;
+      }
     } finally {
       setSending(false);
     }
@@ -209,6 +216,27 @@ export function LiveThread({
       </div>
     </div>
   );
+}
+
+// Merge polled messages, skipping ones already present by id and reconciling
+// any pending optimistic bubble (same sender + body) into its real row rather
+// than appending a duplicate. Returns the original array if nothing changed.
+function mergeIncoming(prev: Msg[], incoming: Msg[]): Msg[] {
+  let result = prev;
+  let changed = false;
+  for (const m of incoming) {
+    if (result.some((x) => x.id === m.id)) continue;
+    const tIdx = result.findIndex(
+      (x) => x.id.startsWith("temp-") && x.senderId === m.senderId && x.body === m.body,
+    );
+    if (tIdx >= 0) {
+      result = result.map((x, i) => (i === tIdx ? m : x));
+    } else {
+      result = [...result, m];
+    }
+    changed = true;
+  }
+  return changed ? result : prev;
 }
 
 // Monotonic-ish local id source; avoids Date.now() lint in shared code paths.
