@@ -4,6 +4,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Presence } from "@/components/Presence";
+import { Tour } from "@/components/Tour";
 import { getCurrentUser } from "@/lib/auth";
 
 const newsreader = Newsreader({
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${newsreader.variable} ${publicSans.variable}`}>
       <body className="flex min-h-screen flex-col">
         {user ? <Presence /> : null}
+        {user ? <Tour /> : null}
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />

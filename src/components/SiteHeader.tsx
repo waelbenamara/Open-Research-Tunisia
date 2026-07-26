@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Avatar } from "./ui";
 import { UserMenu } from "./UserMenu";
+import { TourButton } from "./TourButton";
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
@@ -27,7 +27,11 @@ export async function SiteHeader() {
         </Link>
 
         <nav className="hidden items-center gap-[22px] text-[14px] font-medium md:flex">
-          <Link href="/" className="text-ink-4 no-underline hover:text-ink hover:no-underline">
+          <Link
+            href="/"
+            data-tour="discover"
+            className="text-ink-4 no-underline hover:text-ink hover:no-underline"
+          >
             Discover
           </Link>
           <Link
@@ -42,6 +46,7 @@ export async function SiteHeader() {
           {user ? (
             <Link
               href="/dashboard"
+              data-tour="mywork"
               className="text-ink-4 no-underline hover:text-ink hover:no-underline"
             >
               My work
@@ -58,8 +63,10 @@ export async function SiteHeader() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            <TourButton />
             <Link
               href="/messages"
+              data-tour="messages"
               className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"
               aria-label={`Messages${unreadMsgs ? `, ${unreadMsgs} unread` : ""}`}
             >
@@ -72,6 +79,7 @@ export async function SiteHeader() {
             </Link>
             <Link
               href="/notifications"
+              data-tour="inbox"
               className="relative text-[13px] font-medium text-ink-4 no-underline hover:text-ink hover:no-underline"
               aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
             >

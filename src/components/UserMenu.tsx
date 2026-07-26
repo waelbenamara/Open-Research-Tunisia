@@ -41,8 +41,9 @@ export function UserMenu({
   return (
     <div className="relative" ref={ref}>
       <button
+        data-tour="account"
         onClick={() => setOpen((v) => !v)}
-        className="cursor-pointer border-none bg-transparent p-0"
+        className="cursor-pointer rounded-full border-none bg-transparent p-0"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
