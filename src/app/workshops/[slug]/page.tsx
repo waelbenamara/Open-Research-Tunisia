@@ -7,6 +7,7 @@ import { avatarSrc, dateTime, fileExt, fullDate, parseList, viewableKind } from 
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
 import { updateSessionAction } from "@/actions/workshops";
+import { LiveSessionBanner } from "./LiveSessionBanner";
 import { RESOURCE_KINDS } from "@/lib/enums";
 import {
   Avatar,
@@ -106,9 +107,35 @@ export default async function WorkshopPage({
 
   const isOverview = tab === "overview";
 
+  // The soonest session that hasn't ended yet — for the live/next-session banner.
+  const nowMs = Date.now();
+  const nextSession =
+    workshop.status !== "COMPLETED"
+      ? [...workshop.sessions]
+          .filter((s) => s.scheduledAt.getTime() + s.durationMin * 60_000 > nowMs)
+          .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime())[0] ?? null
+      : null;
+  const onlineish = workshop.format === "ONLINE" || workshop.format === "HYBRID";
+
   return (
     <Shell className="pb-24 pt-7">
       <Breadcrumb href="/" label="Discover" current="Workshop" />
+
+      {nextSession ? (
+        <LiveSessionBanner
+          session={{
+            index: nextSession.index,
+            title: nextSession.title,
+            startISO: nextSession.scheduledAt.toISOString(),
+            durationMin: nextSession.durationMin,
+            meetingUrl: nextSession.meetingUrl,
+          }}
+          online={onlineish}
+          location={workshop.location}
+          canJoin={isEnrolled || canManage}
+          isEnrolled={isEnrolled}
+        />
+      ) : null}
 
       <div className={`grid items-start gap-10 ${isOverview ? "lg:grid-cols-[1fr_340px]" : "grid-cols-1"}`}>
         <div className="flex min-w-0 flex-col gap-8">
