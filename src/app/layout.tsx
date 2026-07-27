@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { Presence } from "@/components/Presence";
 import { Tour } from "@/components/Tour";
 import { BottomNav } from "@/components/BottomNav";
+import { Analytics } from "@vercel/analytics/next";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <SiteFooter />
         </div>
         {user ? <BottomNav unread={unread} unreadMsgs={unreadMsgs} /> : null}
+        <Analytics />
       </body>
     </html>
   );
