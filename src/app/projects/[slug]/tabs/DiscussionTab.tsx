@@ -1,8 +1,11 @@
 import { db } from "@/lib/db";
-import { avatarSrc, relativeTime } from "@/lib/format";
-import { postMessageAction } from "@/actions/projects";
-import { Avatar, EmptyState } from "@/components/ui";
+import { getCurrentUser } from "@/lib/auth";
+import { avatarSrc } from "@/lib/format";
+import { loadReactions } from "@/lib/reactionData";
+import { EmptyState } from "@/components/ui";
 import type { ProjectAccess } from "@/lib/permissions";
+import { MessageComposer } from "./MessageComposer";
+import { MessageThread, type DiscussionMessage } from "./MessageThread";
 
 export async function DiscussionTab({
   projectId,
@@ -21,47 +24,64 @@ export async function DiscussionTab({
     );
   }
 
+  const me = await getCurrentUser();
   const messages = await db.message.findMany({
     where: { projectId },
     include: { author: { select: { id: true, name: true, avatarColor: true, avatarUrl: true, avatarPath: true } } },
     orderBy: { createdAt: "asc" },
-    take: 200,
+    take: 300,
   });
+
+  const reactions = await loadReactions(
+    "message",
+    messages.map((m) => m.id),
+    me?.id ?? "",
+  );
+
+  const toMsg = (m: (typeof messages)[number]): DiscussionMessage => {
+    const summary = reactions.get(m.id);
+    return {
+      id: m.id,
+      body: m.body,
+      createdAt: m.createdAt.toISOString(),
+      author: {
+        id: m.author.id,
+        name: m.author.name,
+        avatarColor: m.author.avatarColor,
+        avatarSrc: avatarSrc(m.author),
+      },
+      reactionCounts: summary?.counts ?? {},
+      myReaction: summary?.myReaction ?? null,
+      replies: [],
+    };
+  };
+
+  // Thread one level deep.
+  const repliesByParent = new Map<string, (typeof messages)[number][]>();
+  for (const m of messages) {
+    if (m.parentId) {
+      const list = repliesByParent.get(m.parentId) ?? [];
+      list.push(m);
+      repliesByParent.set(m.parentId, list);
+    }
+  }
+  const threads = messages
+    .filter((m) => !m.parentId)
+    .map((m) => ({ ...toMsg(m), replies: (repliesByParent.get(m.id) ?? []).map(toMsg) }));
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3.5">
-        {messages.length === 0 ? (
+      <div className="flex flex-col gap-4">
+        {threads.length === 0 ? (
           <EmptyState title="No messages yet." hint="Be the first to say something." />
         ) : (
-          messages.map((m) => (
-            <div key={m.id} className="flex gap-3.5">
-              <Avatar name={m.author.name} color={m.author.avatarColor} src={avatarSrc(m.author)} size={34} />
-              <div className="flex-1 border border-line bg-card px-4 py-3">
-                <div className="mb-1 flex items-baseline gap-2.5">
-                  <span className="text-[13.5px] font-semibold">{m.author.name}</span>
-                  <span className="text-[12px] text-muted">{relativeTime(m.createdAt)}</span>
-                </div>
-                <div className="whitespace-pre-line text-[14px] leading-[1.55] text-ink-2">
-                  {m.body}
-                </div>
-              </div>
-            </div>
-          ))
+          threads.map((m) => <MessageThread key={m.id} message={m} projectId={projectId} />)
         )}
       </div>
 
-      <form action={postMessageAction} className="flex gap-2.5">
-        <input type="hidden" name="projectId" value={projectId} />
-        <input name="body" placeholder="Write a message to the project…" required className="flex-1" />
-        <button
-          type="submit"
-          className="cursor-pointer whitespace-nowrap border-none bg-brick px-[22px] py-2.5 text-[13.5px] font-semibold hover:bg-brick-dark"
-          style={{ color: "#faf8f3" }}
-        >
-          Post
-        </button>
-      </form>
+      <div className="border-t border-line pt-4">
+        <MessageComposer projectId={projectId} placeholder="Write a message to the project…  @ to mention" />
+      </div>
     </div>
   );
 }

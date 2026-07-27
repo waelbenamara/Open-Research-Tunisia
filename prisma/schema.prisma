@@ -96,6 +96,7 @@ model User {
   posts            Post[]
   postComments     PostComment[]
   postReactions    PostReaction[]
+  reactions        Reaction[]
 }
 
 /// A social login linked to a user. One user can link both Google and GitHub.
@@ -372,9 +373,13 @@ model Message {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
   body      String
+  parentId  String?
+  parent    Message?  @relation("MessageReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Message[] @relation("MessageReplies")
   createdAt DateTime @default(now())
 
   @@index([projectId])
+  @@index([parentId])
 }
 
 /// Without a task board, "you're accepted" leads nowhere.
@@ -650,9 +655,29 @@ model PostComment {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   body      String
+  parentId  String?
+  parent    PostComment?  @relation("PostCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PostComment[] @relation("PostCommentReplies")
   createdAt DateTime @default(now())
 
   @@index([postId])
+  @@index([parentId])
+}
+
+/// A generic reaction that can attach to any target (a feed comment, a project
+/// discussion message, …) via targetType + targetId — one row per user per
+/// target. Kinds: like|celebrate|love|insightful|clap (see lib/reactions).
+model Reaction {
+  id         String   @id @default(cuid())
+  targetType String
+  targetId   String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       String   @default("like")
+  createdAt  DateTime @default(now())
+
+  @@unique([targetType, targetId, userId])
+  @@index([targetType, targetId])
 }
 
 /// One reaction per user per post; `kind` is like|celebrate|love|insightful|clap.

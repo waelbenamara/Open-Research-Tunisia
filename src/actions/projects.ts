@@ -7,6 +7,7 @@ import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
 import { newApplicationEmail } from "@/lib/applicationEmail";
+import { extractMentionIds, mentionPlainText } from "@/lib/mentions";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getProjectAccess, canCreateProject } from "@/lib/permissions";
@@ -551,6 +552,7 @@ export async function decideApplicationAction(formData: FormData) {
 export async function postMessageAction(formData: FormData) {
   const user = await requireUser();
   const projectId = String(formData.get("projectId"));
+  const parentIdRaw = String(formData.get("parentId") || "") || null;
   const body = String(formData.get("body") || "").trim();
   if (!body) return;
 
@@ -558,15 +560,55 @@ export async function postMessageAction(formData: FormData) {
   const access = await getProjectAccess(project.id, project.leadId, user);
   if (!access.canSeeInternal) throw new Error("FORBIDDEN");
 
-  await db.message.create({ data: { projectId, authorId: user.id, body } });
+  // Threading is one level deep: a reply's parent is the top-level message.
+  let parentId: string | null = null;
+  let parentAuthorId: string | null = null;
+  if (parentIdRaw) {
+    const parent = await db.message.findUnique({
+      where: { id: parentIdRaw },
+      select: { id: true, projectId: true, parentId: true, authorId: true },
+    });
+    if (parent && parent.projectId === projectId) {
+      parentId = parent.parentId ?? parent.id;
+      parentAuthorId = parent.authorId;
+    }
+  }
+
+  await db.message.create({ data: { projectId, authorId: user.id, body, parentId } });
   // The fact of posting is logged; the message content deliberately is not.
   await audit(user.id, "MESSAGE_POST", "Project", projectId, project.title);
-  await notify(await projectAudience(projectId, user.id), {
+
+  const preview = mentionPlainText(body).slice(0, 120);
+  const link = `/projects/${project.slug}?tab=discussion`;
+  const mentioned = new Set(extractMentionIds(body));
+
+  // The project audience hears about the message (minus anyone we'll @notify).
+  const audience = (await projectAudience(projectId, user.id)).filter((id) => !mentioned.has(id));
+  await notify(audience, {
     type: "MESSAGE",
     title: `New message in ${project.title}`,
-    body: `${user.name}: ${body.slice(0, 120)}`,
-    link: `/projects/${project.slug}?tab=discussion`,
+    body: `${user.name}: ${preview}`,
+    link,
   });
+  // The person replied to.
+  if (parentAuthorId && parentAuthorId !== user.id && !mentioned.has(parentAuthorId)) {
+    await notify(parentAuthorId, {
+      type: "MESSAGE_REPLY",
+      title: `${user.name} replied to your message`,
+      body: preview,
+      link,
+    });
+  }
+  // Anyone @mentioned (higher-signal notification).
+  for (const mid of mentioned) {
+    if (mid === user.id) continue;
+    await notify(mid, {
+      type: "MENTION",
+      title: `${user.name} mentioned you in ${project.title}`,
+      body: preview,
+      link,
+    });
+  }
   revalidatePath(`/projects/${project.slug}`);
 }
 

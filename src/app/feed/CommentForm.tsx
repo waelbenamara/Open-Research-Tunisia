@@ -1,84 +1,75 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui";
-import { EmojiPicker } from "@/components/EmojiPicker";
+import { MentionInput } from "@/components/MentionInput";
 import { addCommentAction } from "@/actions/feed";
 
 export function CommentForm({
   postId,
   me,
+  parentId,
+  placeholder,
+  autoFocus,
+  onDone,
 }: {
   postId: string;
   me: { name: string; avatarColor: string; avatarSrc: string | null };
+  parentId?: string;
+  placeholder?: string;
+  autoFocus?: boolean;
+  onDone?: () => void;
 }) {
   const router = useRouter();
-  const [value, setValue] = useState("");
+  const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  function insertEmoji(emoji: string) {
-    const el = inputRef.current;
-    if (!el) {
-      setValue((v) => v + emoji);
-      return;
-    }
-    const start = el.selectionStart ?? value.length;
-    const end = el.selectionEnd ?? value.length;
-    setValue(value.slice(0, start) + emoji + value.slice(end));
-    requestAnimationFrame(() => {
-      el.focus();
-      const pos = start + emoji.length;
-      el.setSelectionRange(pos, pos);
-    });
-  }
+  const [k, setK] = useState(0); // bump to reset the mention input
 
   async function submit() {
-    const body = value.trim();
-    if (!body || busy) return;
+    const text = body.trim();
+    if (!text || busy) return;
     setBusy(true);
-    setValue("");
     try {
       const fd = new FormData();
       fd.set("postId", postId);
-      fd.set("body", body);
+      if (parentId) fd.set("parentId", parentId);
+      fd.set("body", text);
       await addCommentAction(fd);
+      setBody("");
+      setK((n) => n + 1);
       router.refresh();
+      onDone?.();
     } catch {
-      setValue(body); // restore on failure
+      /* keep the text so nothing is lost */
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex items-center gap-2 pt-1">
-      <Avatar name={me.name} color={me.avatarColor} src={me.avatarSrc} size={28} />
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            submit();
-          }
-        }}
-        placeholder="Write a comment…"
-        aria-label="Write a comment"
-        className="!m-0 flex-1 !rounded-full !border-line-input !bg-paper !py-2 !text-[13px]"
-      />
-      <EmojiPicker onPick={insertEmoji} align="right" />
-      <button
-        type="button"
-        onClick={submit}
-        disabled={busy || !value.trim()}
-        className="cursor-pointer rounded-full border-none bg-brick px-3.5 py-2 text-[12.5px] font-semibold disabled:opacity-40"
-        style={{ color: "#faf8f3" }}
-      >
-        Send
-      </button>
+    <div className="flex items-start gap-2 pt-1">
+      <Avatar name={me.name} color={me.avatarColor} src={me.avatarSrc} size={parentId ? 24 : 28} />
+      <div className="flex flex-1 items-end gap-2">
+        <MentionInput
+          key={k}
+          onChange={setBody}
+          onSubmit={submit}
+          rows={1}
+          autoFocus={autoFocus}
+          placeholder={placeholder ?? "Write a comment…  @ to mention"}
+          className="!m-0 max-h-[120px] w-full resize-none !rounded-[16px] !border-line-input !bg-paper !py-2 !text-[13px]"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy || !body.trim()}
+          className="shrink-0 cursor-pointer rounded-full border-none bg-brick px-3.5 py-2 text-[12.5px] font-semibold disabled:opacity-40"
+          style={{ color: "#faf8f3" }}
+        >
+          Send
+        </button>
+      </div>
     </div>
   );
 }

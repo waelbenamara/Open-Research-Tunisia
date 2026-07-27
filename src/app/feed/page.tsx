@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { avatarSrc } from "@/lib/format";
+import { loadReactions } from "@/lib/reactionData";
 import { Shell } from "@/components/ui";
 import { Composer } from "./Composer";
-import { PostCard, type FeedPost } from "./PostCard";
+import { PostCard, type FeedComment, type FeedPost } from "./PostCard";
 
 export const metadata = { title: "Feed" };
 
@@ -49,6 +50,29 @@ export default async function FeedPage() {
     }),
   ]);
 
+  // Reaction summaries for every comment, in one query.
+  const allCommentIds = rawPosts.flatMap((p) => p.comments.map((c) => c.id));
+  const commentReactions = await loadReactions("post_comment", allCommentIds, me.id);
+
+  type RawComment = (typeof rawPosts)[number]["comments"][number];
+  const toComment = (c: RawComment): FeedComment => {
+    const summary = commentReactions.get(c.id);
+    return {
+      id: c.id,
+      body: c.body,
+      createdAt: c.createdAt.toISOString(),
+      author: {
+        id: c.author.id,
+        name: c.author.name,
+        avatarColor: c.author.avatarColor,
+        avatarSrc: avatarSrc(c.author),
+      },
+      reactionCounts: summary?.counts ?? {},
+      myReaction: summary?.myReaction ?? null,
+      replies: [],
+    };
+  };
+
   const posts: FeedPost[] = rawPosts.map((p) => {
     const reactionCounts: Record<string, number> = {};
     let myReaction: string | null = null;
@@ -56,6 +80,20 @@ export default async function FeedPage() {
       reactionCounts[r.kind] = (reactionCounts[r.kind] ?? 0) + 1;
       if (r.userId === me.id) myReaction = r.kind;
     }
+
+    // Thread comments one level deep: top-level comments carry their replies.
+    const repliesByParent = new Map<string, RawComment[]>();
+    for (const c of p.comments) {
+      if (c.parentId) {
+        const list = repliesByParent.get(c.parentId) ?? [];
+        list.push(c);
+        repliesByParent.set(c.parentId, list);
+      }
+    }
+    const comments = p.comments
+      .filter((c) => !c.parentId)
+      .map((c) => ({ ...toComment(c), replies: (repliesByParent.get(c.id) ?? []).map(toComment) }));
+
     return {
       id: p.id,
       body: p.body,
@@ -72,17 +110,7 @@ export default async function FeedPage() {
       linkedWorkshop: p.linkedWorkshop,
       reactionCounts,
       myReaction,
-      comments: p.comments.map((c) => ({
-        id: c.id,
-        body: c.body,
-        createdAt: c.createdAt.toISOString(),
-        author: {
-          id: c.author.id,
-          name: c.author.name,
-          avatarColor: c.author.avatarColor,
-          avatarSrc: avatarSrc(c.author),
-        },
-      })),
+      comments,
     };
   });
 

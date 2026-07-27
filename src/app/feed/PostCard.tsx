@@ -2,12 +2,21 @@ import Link from "next/link";
 import { Avatar } from "@/components/ui";
 import { Markdown } from "@/components/Markdown";
 import { relativeTime } from "@/lib/format";
-import { deleteCommentAction, deletePostAction } from "@/actions/feed";
+import { deletePostAction } from "@/actions/feed";
 import { ReactionBar } from "./ReactionBar";
 import { CommentForm } from "./CommentForm";
+import { CommentThread } from "./CommentThread";
 
 type Person = { id: string; name: string; avatarColor: string; avatarSrc: string | null };
-export type FeedComment = { id: string; body: string; createdAt: string; author: Person };
+export type FeedComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: Person;
+  reactionCounts: Record<string, number>;
+  myReaction: string | null;
+  replies?: FeedComment[];
+};
 export type FeedPost = {
   id: string;
   body: string;
@@ -150,42 +159,17 @@ export function PostCard({
       </div>
 
       {/* Comments */}
-      <div className="flex flex-col gap-2.5 border-t border-line-soft px-4 py-3">
-        {post.comments.map((c) => {
-          const canDeleteComment = c.author.id === me.id || post.author.id === me.id || isAdmin;
-          return (
-            <div key={c.id} className="group flex items-start gap-2">
-              <Link href={`/people/${c.author.id}`} className="shrink-0">
-                <Avatar name={c.author.name} color={c.author.avatarColor} src={c.author.avatarSrc} size={28} />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <div className="inline-block rounded-[14px] bg-sand/70 px-3 py-2">
-                  <Link
-                    href={`/people/${c.author.id}`}
-                    className="text-[12.5px] font-semibold text-ink no-underline hover:text-brick"
-                  >
-                    {c.author.name}
-                  </Link>
-                  <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.45] text-ink-2">{c.body}</div>
-                </div>
-                <div className="mt-0.5 flex items-center gap-2 pl-1 text-[11px] text-muted">
-                  <span>{relativeTime(c.createdAt)}</span>
-                  {canDeleteComment ? (
-                    <form action={deleteCommentAction}>
-                      <input type="hidden" name="commentId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-muted opacity-0 transition-opacity hover:text-brick group-hover:opacity-100"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex flex-col gap-3 border-t border-line-soft px-4 py-3">
+        {post.comments.map((c) => (
+          <CommentThread
+            key={c.id}
+            comment={c}
+            postId={post.id}
+            postAuthorId={post.author.id}
+            me={{ id: me.id, name: me.name, avatarColor: me.avatarColor, avatarSrc: me.avatarSrc }}
+            isAdmin={isAdmin}
+          />
+        ))}
         <CommentForm postId={post.id} me={{ name: me.name, avatarColor: me.avatarColor, avatarSrc: me.avatarSrc }} />
       </div>
     </article>

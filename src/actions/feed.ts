@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { audit, notify } from "@/lib/notify";
 import { storeDedupedFile } from "@/lib/files";
 import { REACTION_KINDS } from "@/lib/reactions";
+import { extractMentionIds, mentionPlainText } from "@/lib/mentions";
 
 const MAX_IMAGES = 6;
 const MAX_BODY = 5000;
@@ -77,23 +78,66 @@ export async function deletePostAction(formData: FormData) {
 export async function addCommentAction(formData: FormData) {
   const user = await requireUser();
   const postId = String(formData.get("postId"));
+  const parentIdRaw = String(formData.get("parentId") || "") || null;
   const body = String(formData.get("body") || "").trim().slice(0, MAX_COMMENT);
   if (!body) return;
 
   const post = await db.post.findUnique({ where: { id: postId }, select: { id: true, authorId: true } });
   if (!post) return;
 
-  await db.postComment.create({ data: { postId, authorId: user.id, body } });
-  await audit(user.id, "POST_COMMENT", "Post", postId, body.slice(0, 60));
+  // Threading is one level deep: a reply's parent is always the top-level comment.
+  let parentId: string | null = null;
+  let parentAuthorId: string | null = null;
+  if (parentIdRaw) {
+    const parent = await db.postComment.findUnique({
+      where: { id: parentIdRaw },
+      select: { id: true, postId: true, parentId: true, authorId: true },
+    });
+    if (parent && parent.postId === postId) {
+      parentId = parent.parentId ?? parent.id;
+      parentAuthorId = parent.authorId;
+    }
+  }
 
-  if (post.authorId !== user.id) {
+  await db.postComment.create({ data: { postId, authorId: user.id, body, parentId } });
+  await audit(user.id, "POST_COMMENT", "Post", postId, mentionPlainText(body).slice(0, 60));
+
+  const preview = mentionPlainText(body).slice(0, 120);
+  const link = `/feed#post-${postId}`;
+  const notified = new Set<string>([user.id]);
+
+  // Post author hears about comments on their post.
+  if (!notified.has(post.authorId)) {
+    notified.add(post.authorId);
     await notify(post.authorId, {
       type: "POST_COMMENT",
-      title: `${user.name} commented on your post`,
-      body: body.slice(0, 120),
-      link: `/feed#post-${postId}`,
+      title: `${user.name} ${parentId ? "replied on" : "commented on"} your post`,
+      body: preview,
+      link,
     });
   }
+  // The comment being replied to — its author hears about the reply.
+  if (parentAuthorId && !notified.has(parentAuthorId)) {
+    notified.add(parentAuthorId);
+    await notify(parentAuthorId, {
+      type: "POST_REPLY",
+      title: `${user.name} replied to your comment`,
+      body: preview,
+      link,
+    });
+  }
+  // Anyone @mentioned.
+  for (const mid of extractMentionIds(body)) {
+    if (notified.has(mid)) continue;
+    notified.add(mid);
+    await notify(mid, {
+      type: "MENTION",
+      title: `${user.name} mentioned you in a comment`,
+      body: preview,
+      link,
+    });
+  }
+
   revalidatePath("/feed");
 }
 
