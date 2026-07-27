@@ -97,6 +97,7 @@ model User {
   postComments     PostComment[]
   postReactions    PostReaction[]
   reactions        Reaction[]
+  codeProjects     CodeProject[]
 }
 
 /// A social login linked to a user. One user can link both Google and GitHub.
@@ -218,6 +219,7 @@ model Project {
   bookmarks     Bookmark[]
   events        ProjectEvent[]
   feedPosts     Post[]
+  codeProjects  CodeProject[]
 
   @@index([stage])
   @@index([approvalStatus])
@@ -482,6 +484,7 @@ model Workshop {
   bookmarks     Bookmark[]
   supportsProjects Project[] @relation("WorkshopForProject")
   feedPosts     Post[]
+  codeProjects  CodeProject[]
 }
 
 model WorkshopSession {
@@ -678,6 +681,46 @@ model Reaction {
 
   @@unique([targetType, targetId, userId])
   @@index([targetType, targetId])
+}
+
+/// A snapshot of a code repository attached to a workshop (or project), browsable
+/// in-app like GitHub: a file tree + syntax-highlighted file viewer.
+model CodeProject {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  sourceUrl    String? // e.g. https://github.com/owner/repo
+  sourceRef    String? // branch or tag snapshotted
+  commitSha    String? // exact commit snapshotted
+  fileCount    Int        @default(0)
+  totalBytes   Int        @default(0)
+  truncated    Boolean    @default(false) // some files skipped by caps
+  workshopId   String?
+  workshop     Workshop?  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User       @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime   @default(now())
+  files        CodeFile[]
+
+  @@index([workshopId])
+  @@index([projectId])
+}
+
+/// One file within a CodeProject snapshot. Text is stored inline; binaries and
+/// oversized files are recorded (path/size) with no content.
+model CodeFile {
+  id        String      @id @default(cuid())
+  projectId String
+  project   CodeProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  path      String // e.g. "src/utils/foo.ts"
+  content   String? // null for binary/skipped files
+  size      Int         @default(0)
+  binary    Boolean     @default(false)
+
+  @@unique([projectId, path])
+  @@index([projectId])
 }
 
 /// One reaction per user per post; `kind` is like|celebrate|love|insightful|clap.

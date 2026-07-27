@@ -6,6 +6,8 @@ import { canManageWorkshop } from "@/lib/permissions";
 import { avatarSrc, fileExt, fullDate, parseList, viewableKind } from "@/lib/format";
 import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
+import { deleteCodeProjectAction } from "@/actions/code";
+import { CodeImportForm } from "./CodeImportForm";
 import { LiveSessionBanner } from "./LiveSessionBanner";
 import { SessionManage } from "./SessionManage";
 import { LocalDateTime } from "@/components/LocalDateTime";
@@ -62,6 +64,10 @@ export default async function WorkshopPage({
       enrollments: { select: { id: true, userId: true, status: true } },
       supportsProjects: { select: { slug: true, title: true } },
       announcements: { include: { author: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      codeProjects: {
+        select: { id: true, title: true, sourceUrl: true, fileCount: true, truncated: true },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
   if (!workshop) notFound();
@@ -456,6 +462,51 @@ export default async function WorkshopPage({
                   )}
                 </div>
               </div>
+
+              {workshop.codeProjects.length > 0 || canManage ? (
+                <div>
+                  <SectionLabel>Code</SectionLabel>
+                  {canManage ? <CodeImportForm workshopId={workshop.id} /> : null}
+                  <div className="flex flex-col gap-2.5">
+                    {workshop.codeProjects.length === 0 ? (
+                      <EmptyState
+                        title="No code projects yet."
+                        hint={canManage ? "Add a GitHub repo above to let learners browse it here." : undefined}
+                      />
+                    ) : (
+                      workshop.codeProjects.map((cp) => (
+                        <Card key={cp.id} className="flex items-center gap-4 px-5 py-3.5">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-ink/[0.06] font-mono text-[13px] font-bold text-ink-3">
+                            {"</>"}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[14.5px] font-semibold">{cp.title}</div>
+                            <div className="truncate text-[12px] text-muted">
+                              {cp.fileCount} files
+                              {cp.truncated ? " · partial" : ""}
+                              {cp.sourceUrl ? ` · ${cp.sourceUrl.replace("https://github.com/", "")}` : ""}
+                            </div>
+                          </div>
+                          <a href={`/code/${cp.id}`} className="text-[13px] font-semibold">
+                            Browse code
+                          </a>
+                          {canManage ? (
+                            <form action={deleteCodeProjectAction}>
+                              <input type="hidden" name="id" value={cp.id} />
+                              <button
+                                type="submit"
+                                className="cursor-pointer border-none bg-transparent p-0 text-[12.5px] text-muted hover:text-brick"
+                              >
+                                Remove
+                              </button>
+                            </form>
+                          ) : null}
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
 
               {workshop.announcements.length ? (
                 <div>
