@@ -36,6 +36,15 @@ function extOf(path: string) {
   return dot > 0 ? base.slice(dot + 1).toLowerCase() : "";
 }
 
+/** Shared with the ZIP importer: which paths to skip and the size caps. */
+export function isIgnoredPath(path: string): boolean {
+  return IGNORE_DIRS.some((d) => path.startsWith(d) || path.includes(`/${d}`));
+}
+export function isBinaryPath(path: string): boolean {
+  return BINARY_EXTS.has(extOf(path));
+}
+export const CODE_CAPS = { MAX_FILES, MAX_FILE_SIZE, MAX_TOTAL, NUL };
+
 /** Parse a GitHub repo URL (or "owner/repo") into its parts. */
 export function parseRepoUrl(input: string): { owner: string; repo: string; ref?: string } | null {
   const s = input.trim();
