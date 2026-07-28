@@ -369,18 +369,21 @@ model Announcement {
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  body      String
-  parentId  String?
-  parent    Message?  @relation("MessageReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Message[] @relation("MessageReplies")
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  projectId  String?
+  project    Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workshopId String?
+  workshop   Workshop? @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id])
+  body       String
+  parentId   String?
+  parent     Message?  @relation("MessageReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Message[] @relation("MessageReplies")
+  createdAt  DateTime  @default(now())
 
   @@index([projectId])
+  @@index([workshopId])
   @@index([parentId])
 }
 
@@ -485,6 +488,7 @@ model Workshop {
   supportsProjects Project[] @relation("WorkshopForProject")
   feedPosts     Post[]
   codeProjects  CodeProject[]
+  messages      Message[]
 }
 
 model WorkshopSession {

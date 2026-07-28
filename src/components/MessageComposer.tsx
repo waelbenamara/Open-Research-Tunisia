@@ -5,14 +5,17 @@ import { useRouter } from "next/navigation";
 import { MentionInput } from "@/components/MentionInput";
 import { postMessageAction } from "@/actions/projects";
 
+/** A message composer for a project OR workshop discussion (pass one id). */
 export function MessageComposer({
   projectId,
+  workshopId,
   parentId,
   placeholder,
   autoFocus,
   onDone,
 }: {
-  projectId: string;
+  projectId?: string;
+  workshopId?: string;
   parentId?: string;
   placeholder?: string;
   autoFocus?: boolean;
@@ -29,7 +32,8 @@ export function MessageComposer({
     setBusy(true);
     try {
       const fd = new FormData();
-      fd.set("projectId", projectId);
+      if (projectId) fd.set("projectId", projectId);
+      if (workshopId) fd.set("workshopId", workshopId);
       if (parentId) fd.set("parentId", parentId);
       fd.set("body", text);
       await postMessageAction(fd);

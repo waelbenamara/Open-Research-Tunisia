@@ -10,8 +10,8 @@ import { newApplicationEmail } from "@/lib/applicationEmail";
 import { extractMentionIds, mentionPlainText } from "@/lib/mentions";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { getProjectAccess, canCreateProject } from "@/lib/permissions";
-import { audit, notify, projectAudience } from "@/lib/notify";
+import { getProjectAccess, canCreateProject, canManageWorkshop } from "@/lib/permissions";
+import { audit, notify, projectAudience, workshopAudience } from "@/lib/notify";
 import { slugify } from "@/lib/format";
 import { deleteObject, kindFromExt, storeUpload } from "@/lib/storage";
 import {
@@ -551,14 +551,39 @@ export async function decideApplicationAction(formData: FormData) {
 
 export async function postMessageAction(formData: FormData) {
   const user = await requireUser();
-  const projectId = String(formData.get("projectId"));
+  const projectId = String(formData.get("projectId") || "") || null;
+  const workshopId = String(formData.get("workshopId") || "") || null;
   const parentIdRaw = String(formData.get("parentId") || "") || null;
   const body = String(formData.get("body") || "").trim();
-  if (!body) return;
+  if (!body || (!projectId && !workshopId)) return;
 
-  const project = await loadProject(projectId);
-  const access = await getProjectAccess(project.id, project.leadId, user);
-  if (!access.canSeeInternal) throw new Error("FORBIDDEN");
+  // Resolve the discussion's home (project or workshop) and check access.
+  let title: string;
+  let base: string; // "/projects/slug" or "/workshops/slug"
+  if (projectId) {
+    const project = await loadProject(projectId);
+    const access = await getProjectAccess(project.id, project.leadId, user);
+    if (!access.canSeeInternal) throw new Error("FORBIDDEN");
+    title = project.title;
+    base = `/projects/${project.slug}`;
+  } else {
+    const workshop = await db.workshop.findUnique({
+      where: { id: workshopId! },
+      select: { id: true, slug: true, title: true, facilitatorId: true },
+    });
+    if (!workshop) throw new Error("Not found");
+    const canManage = await canManageWorkshop(workshop.facilitatorId, user);
+    const enrollment = await db.enrollment.findUnique({
+      where: { workshopId_userId: { workshopId: workshop.id, userId: user.id } },
+      select: { status: true },
+    });
+    const isParticipant = enrollment?.status === "ENROLLED" || enrollment?.status === "COMPLETED";
+    if (!canManage && !isParticipant) throw new Error("FORBIDDEN");
+    title = workshop.title;
+    base = `/workshops/${workshop.slug}`;
+  }
+  const scope = projectId ? { projectId } : { workshopId };
+  const link = `${base}?tab=discussion`;
 
   // Threading is one level deep: a reply's parent is the top-level message.
   let parentId: string | null = null;
@@ -566,31 +591,33 @@ export async function postMessageAction(formData: FormData) {
   if (parentIdRaw) {
     const parent = await db.message.findUnique({
       where: { id: parentIdRaw },
-      select: { id: true, projectId: true, parentId: true, authorId: true },
+      select: { id: true, projectId: true, workshopId: true, parentId: true, authorId: true },
     });
-    if (parent && parent.projectId === projectId) {
+    const sameScope =
+      parent && (projectId ? parent.projectId === projectId : parent.workshopId === workshopId);
+    if (sameScope && parent) {
       parentId = parent.parentId ?? parent.id;
       parentAuthorId = parent.authorId;
     }
   }
 
-  await db.message.create({ data: { projectId, authorId: user.id, body, parentId } });
+  await db.message.create({ data: { ...scope, authorId: user.id, body, parentId } });
   // The fact of posting is logged; the message content deliberately is not.
-  await audit(user.id, "MESSAGE_POST", "Project", projectId, project.title);
+  await audit(user.id, "MESSAGE_POST", projectId ? "Project" : "Workshop", (projectId ?? workshopId)!, title);
 
   const preview = mentionPlainText(body).slice(0, 120);
-  const link = `/projects/${project.slug}?tab=discussion`;
   const mentioned = new Set(extractMentionIds(body));
 
-  // The project audience hears about the message (minus anyone we'll @notify).
-  const audience = (await projectAudience(projectId, user.id)).filter((id) => !mentioned.has(id));
+  const audienceIds = projectId
+    ? await projectAudience(projectId, user.id)
+    : await workshopAudience(workshopId!, user.id);
+  const audience = audienceIds.filter((id) => !mentioned.has(id));
   await notify(audience, {
     type: "MESSAGE",
-    title: `New message in ${project.title}`,
+    title: `New message in ${title}`,
     body: `${user.name}: ${preview}`,
     link,
   });
-  // The person replied to.
   if (parentAuthorId && parentAuthorId !== user.id && !mentioned.has(parentAuthorId)) {
     await notify(parentAuthorId, {
       type: "MESSAGE_REPLY",
@@ -599,17 +626,16 @@ export async function postMessageAction(formData: FormData) {
       link,
     });
   }
-  // Anyone @mentioned (higher-signal notification).
   for (const mid of mentioned) {
     if (mid === user.id) continue;
     await notify(mid, {
       type: "MENTION",
-      title: `${user.name} mentioned you in ${project.title}`,
+      title: `${user.name} mentioned you in ${title}`,
       body: preview,
       link,
     });
   }
-  revalidatePath(`/projects/${project.slug}`);
+  revalidatePath(base);
 }
 
 /* ── Announcements, meetings, resources ─────────────────── */

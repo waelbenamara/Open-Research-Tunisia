@@ -45,9 +45,11 @@ function Bubble({ m, size }: { m: DiscussionMessage; size: number }) {
 export function MessageThread({
   message,
   projectId,
+  workshopId,
 }: {
   message: DiscussionMessage;
-  projectId: string;
+  projectId?: string;
+  workshopId?: string;
 }) {
   const [replying, setReplying] = useState(false);
 
@@ -92,6 +94,7 @@ export function MessageThread({
         <div className="ml-[46px]">
           <MessageComposer
             projectId={projectId}
+            workshopId={workshopId}
             parentId={message.id}
             autoFocus
             placeholder="Write a reply…  @ to mention"

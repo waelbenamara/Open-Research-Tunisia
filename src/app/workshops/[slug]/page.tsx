@@ -8,6 +8,7 @@ import { KIND_COLORS } from "@/lib/theme";
 import { addResourceAction } from "@/actions/projects";
 import { deleteCodeProjectAction } from "@/actions/code";
 import { CodeImportForm } from "./CodeImportForm";
+import { DiscussionPanel } from "@/components/DiscussionPanel";
 import { LiveSessionBanner } from "./LiveSessionBanner";
 import { SessionManage } from "./SessionManage";
 import { LocalDateTime } from "@/components/LocalDateTime";
@@ -106,10 +107,12 @@ export default async function WorkshopPage({
 
   const assignmentCount = await db.assignment.count({ where: { workshopId: workshop.id } });
 
+  const canDiscuss = isEnrolled || canManage;
   const tabs: [string, string][] = [
     ["overview", "Overview"],
     ["assignments", `Assignments${assignmentCount ? ` (${assignmentCount})` : ""}`],
   ];
+  if (canDiscuss) tabs.push(["discussion", "Discussion"]);
   if (canManage) tabs.push(["roster", `Roster (${taken})`]);
 
   const isOverview = tab === "overview";
@@ -534,6 +537,23 @@ export default async function WorkshopPage({
               isEnrolled={isEnrolled}
               userId={user?.id ?? null}
             />
+          ) : null}
+
+          {tab === "discussion" ? (
+            canDiscuss ? (
+              <div className="mx-auto max-w-[760px]">
+                <DiscussionPanel
+                  workshopId={workshop.id}
+                  composerPlaceholder="Ask a question or share something with the group…  @ to mention"
+                  emptyHint="Ask a question, share a resource, or introduce yourself."
+                />
+              </div>
+            ) : (
+              <EmptyState
+                title="The discussion is for participants."
+                hint="Enrol in this workshop to join the conversation."
+              />
+            )
           ) : null}
 
           {tab === "roster" && canManage ? (

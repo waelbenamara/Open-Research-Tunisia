@@ -19,11 +19,22 @@ async function targetContext(targetType: string, targetId: string) {
   if (targetType === "message") {
     const m = await db.message.findUnique({
       where: { id: targetId },
-      select: { authorId: true, project: { select: { slug: true } } },
+      select: {
+        authorId: true,
+        project: { select: { slug: true } },
+        workshop: { select: { slug: true } },
+      },
     });
     if (!m) return null;
-    const link = `/projects/${m.project.slug}?tab=discussion`;
-    return { authorId: m.authorId, path: `/projects/${m.project.slug}`, link };
+    if (m.workshop) {
+      const base = `/workshops/${m.workshop.slug}`;
+      return { authorId: m.authorId, path: base, link: `${base}?tab=discussion` };
+    }
+    if (m.project) {
+      const base = `/projects/${m.project.slug}`;
+      return { authorId: m.authorId, path: base, link: `${base}?tab=discussion` };
+    }
+    return null;
   }
   return null;
 }

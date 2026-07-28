@@ -38,3 +38,17 @@ export async function projectAudience(projectId: string, exclude?: string) {
   const ids = [project.leadId, ...project.members.map((m) => m.userId)];
   return ids.filter((id) => id !== exclude);
 }
+
+/** The facilitator plus everyone enrolled in a workshop. */
+export async function workshopAudience(workshopId: string, exclude?: string) {
+  const workshop = await db.workshop.findUnique({
+    where: { id: workshopId },
+    select: {
+      facilitatorId: true,
+      enrollments: { where: { status: { in: ["ENROLLED", "COMPLETED"] } }, select: { userId: true } },
+    },
+  });
+  if (!workshop) return [];
+  const ids = [workshop.facilitatorId, ...workshop.enrollments.map((e) => e.userId)];
+  return [...new Set(ids)].filter((id) => id !== exclude);
+}
