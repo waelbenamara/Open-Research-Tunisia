@@ -74,6 +74,16 @@ async function assertManage(projectId: string) {
   return { user, project, access };
 }
 
+/** Assert the current user is part of the project (member, maintainer, lead, or
+ *  admin) — the bar for contributing content like resources. */
+async function assertMember(projectId: string) {
+  const user = await requireUser();
+  const project = await loadProject(projectId);
+  const access = await getProjectAccess(project.id, project.leadId, user);
+  if (!access.canSeeInternal) throw new Error("FORBIDDEN");
+  return { user, project, access };
+}
+
 /* ── Create / edit a project ────────────────────────────── */
 
 const projectSchema = z.object({
@@ -710,7 +720,8 @@ export async function addResourceAction(formData: FormData) {
 
   let slugPath = "/";
   if (projectId) {
-    const { project } = await assertManage(projectId);
+    // Any project member can contribute a resource.
+    const { project } = await assertMember(projectId);
     slugPath = `/projects/${project.slug}`;
   } else if (workshopId) {
     const w = await db.workshop.findUnique({

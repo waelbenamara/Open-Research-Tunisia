@@ -149,7 +149,7 @@ export async function ResourcesTab({
 
   return (
     <div className="flex flex-col gap-2.5">
-      {access.canManage ? (
+      {access.canSeeInternal ? (
         <Details label="+ Add resource">
           <form action={addResourceAction} className="flex flex-col gap-3.5">
             <input type="hidden" name="projectId" value={projectId} />
