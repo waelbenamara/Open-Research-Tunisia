@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runDigest } from "@/lib/digest";
+import { appOrigin } from "@/lib/appUrl";
 
 // Digests send email and touch many rows — never let this be statically cached.
 export const dynamic = "force-dynamic";
@@ -21,9 +22,9 @@ export async function GET(request: Request) {
     if (!ok) return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const proto = request.headers.get("x-forwarded-proto") ?? "https";
-  const host = request.headers.get("host") ?? "openresearchtunisia.org";
-  const result = await runDigest(`${proto}://${host}`);
+  // Always use the canonical domain — a cron runs on a *.vercel.app host, so the
+  // request host would otherwise leak a Vercel deployment URL into the emails.
+  const result = await runDigest(await appOrigin());
 
   return NextResponse.json({ ok: true, ...result });
 }

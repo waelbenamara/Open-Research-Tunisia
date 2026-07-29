@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { createDirectMessage } from "@/lib/dm";
+import { appOrigin } from "@/lib/appUrl";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,14 +21,12 @@ export async function POST(
 
   const form = await request.formData();
   const files = form.getAll("files").filter((f): f is File => f instanceof File);
-  const proto = request.headers.get("x-forwarded-proto") ?? "https";
-  const host = request.headers.get("host") ?? "openresearchtunisia.org";
 
   const result = await createDirectMessage(me, {
     recipientId,
     body: String(form.get("body") || ""),
     files,
-    origin: `${proto}://${host}`,
+    origin: await appOrigin(),
   });
 
   if (!result) return NextResponse.json({ error: "Nothing to send." }, { status: 400 });

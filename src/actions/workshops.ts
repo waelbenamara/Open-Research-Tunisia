@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { appOrigin } from "@/lib/appUrl";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -274,8 +274,7 @@ export async function enrollAction(formData: FormData) {
       select: { email: true, name: true, emailUpdates: true },
     });
     if (me?.emailUpdates) {
-      const h = await headers();
-      const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+      const origin = await appOrigin();
       const started = workshop.startDate.toLocaleDateString("en-GB", {
         weekday: "long",
         day: "numeric",
@@ -352,8 +351,7 @@ export async function dropEnrollmentAction(formData: FormData) {
         select: { email: true, name: true, emailUpdates: true },
       });
       if (promoted?.emailUpdates) {
-        const h = await headers();
-        const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+        const origin = await appOrigin();
         const template: EmailTemplate = {
           preheader: `A seat opened — you're now enrolled in ${next.workshop.title}.`,
           heading: "A seat opened — you're in",

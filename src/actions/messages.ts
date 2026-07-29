@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { createDirectMessage } from "@/lib/dm";
+import { appOrigin } from "@/lib/appUrl";
 
 async function requestOrigin() {
-  const h = await headers();
-  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+  return appOrigin();
 }
 
 /**

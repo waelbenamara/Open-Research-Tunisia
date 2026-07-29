@@ -6,6 +6,7 @@ import { audit } from "@/lib/notify";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/welcomeEmail";
 import { notifyAdminsOfNewMember } from "@/lib/newMemberAlert";
+import { appOrigin } from "@/lib/appUrl";
 import {
   fetchGithubProfile,
   fetchGoogleProfile,
@@ -70,13 +71,15 @@ export async function GET(
     await audit(result.userId, result.isNew ? "OAUTH_SIGNUP" : "OAUTH_LOGIN", "User", result.userId, provider);
 
     if (result.isNew) {
+      // Emails must link to the canonical domain, not this request's origin.
+      const emailOrigin = await appOrigin();
       // profile.email is guaranteed for a newly created account.
       if (profile.email) {
-        await sendEmail(welcomeEmail(profile.name, profile.email.toLowerCase(), origin));
+        await sendEmail(welcomeEmail(profile.name, profile.email.toLowerCase(), emailOrigin));
       }
       await notifyAdminsOfNewMember(
         { id: result.userId, name: profile.name, email: profile.email?.toLowerCase() ?? "" },
-        origin,
+        emailOrigin,
         provider,
       );
       return NextResponse.redirect(`${origin}/accept-terms`);

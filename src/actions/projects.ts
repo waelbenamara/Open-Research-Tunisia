@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { appOrigin } from "@/lib/appUrl";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { renderEmailHtml, renderEmailText, type EmailTemplate } from "@/lib/emailTemplates";
@@ -401,8 +401,7 @@ export async function applyAction(_prev: ActionState, formData: FormData): Promi
       select: { name: true, email: true, emailUpdates: true },
     });
     if (lead?.email && lead.emailUpdates !== false && project.leadId !== user.id) {
-      const h = await headers();
-      const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+      const origin = await appOrigin();
       await sendEmail(
         newApplicationEmail({
           to: lead.email,
@@ -515,8 +514,7 @@ export async function decideApplicationAction(formData: FormData) {
   // A decision someone never sees is the platform's worst failure mode —
   // so accepted/declined also goes out by email, not only in-app.
   if (decision === "ACCEPTED" || decision === "DECLINED") {
-    const h = await headers();
-    const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host") ?? "localhost:3000"}`;
+    const origin = await appOrigin();
     const accepted = decision === "ACCEPTED";
     const template: EmailTemplate = {
       preheader: accepted

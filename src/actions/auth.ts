@@ -3,7 +3,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -15,6 +14,7 @@ import {
   requireUser,
 } from "@/lib/auth";
 import { avatarColor } from "@/lib/format";
+import { appOrigin } from "@/lib/appUrl";
 import { audit } from "@/lib/notify";
 import { deleteObject, storeUpload } from "@/lib/storage";
 import { sendEmail } from "@/lib/email";
@@ -24,12 +24,9 @@ import { notifyAdminsOfNewMember } from "@/lib/newMemberAlert";
 
 export type ActionState = { error?: string; success?: string } | null;
 
-/** Origin of the current request — mirrors how the OAuth routes derive theirs. */
+/** Canonical base URL for the links in the emails this file sends. */
 async function requestOrigin() {
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("host") ?? "localhost:3000";
-  return `${proto}://${host}`;
+  return appOrigin();
 }
 
 const registerSchema = z.object({
