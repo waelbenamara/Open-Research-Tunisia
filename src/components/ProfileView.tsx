@@ -124,6 +124,11 @@ export async function ProfileView({
                 GitHub
               </a>
             ) : null}
+            {viewerId ? (
+              <a href={`mailto:${user.email}`} className="font-medium text-brick">
+                {user.email}
+              </a>
+            ) : null}
             {isOwner ? (
               <Link href="/profile/edit">Edit profile</Link>
             ) : viewerId ? (
