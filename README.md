@@ -20,6 +20,7 @@ npm run dev               # http://localhost:3000
 
 `npm run db:reset` wipes and reseeds. `npm run db:studio` opens a data browser.
 
+
 ### Seeded accounts — **local development only**
 
 > ⚠️ These accounts exist **only** in a locally seeded database (`npm run setup`).
@@ -191,3 +192,39 @@ To enable: register an OAuth app in each provider's console (callback
 - No rate limiting on login or application submission yet (forgot-password is throttled per-account).
 - `scripts/mksession.ts` mints sessions without a password. It's a dev helper — delete it or guard it
   behind `NODE_ENV !== "production"` before deploying.
+
+
+# Troubleshooting
+
+## Database Setup (macOS / Homebrew)
+
+If you installed PostgreSQL using Homebrew on macOS, Homebrew creates a single default superuser matching your Mac's profile username with **no password**. Prisma requires explicit credentials to connect. 
+
+Follow these steps to configure your local user and update your environment variables.
+
+### 1. Assign a Password to your Local User
+
+Open your terminal and connect to your database (replace `ort_dev` with your target database name if it differs):
+
+```bash
+psql ort_dev
+```
+
+Once inside the PostgreSQL console (`ort_dev=#`), assign a password to your system user account. Replace `your_username` with your Mac profile name and choose a secure password:
+
+```sql
+ALTER USER your_username WITH PASSWORD 'YourSecurePassword123';
+```
+> ⚠️ **Important:** Keep your password alphanumeric (letters and numbers only). Avoid special characters like `@`, `:`, `/`, or `#` as they can break Prisma's connection string parser.
+
+Type `\q` and press **Enter** to exit the PostgreSQL terminal.
+
+### 2. Configure Environment Variables
+
+Create or open the `.env` file in the root directory of your project. Update your `DATABASE_URL` using the following exact structural format:
+
+```env
+# Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE
+DATABASE_URL="postgresql://your_username:YourSecurePassword123@localhost:5432/ort_dev"
+```
+
