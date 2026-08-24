@@ -13,18 +13,17 @@ export default function AboutPage() {
         An open initiative · Est. 2026
       </div>
       <h1 className="font-serif text-[40px] font-medium leading-[1.1] balance">
-        Research shouldn&apos;t require permission.
+        Bringing greater access to academic research in Tunisia.
       </h1>
 
       <div className="mt-7 flex flex-col gap-5 text-[16px] leading-[1.75] text-ink-2 pretty">
         <p>
-          Tunisia has no shortage of curious, capable people. What it has a shortage of is{" "}
-          <em>doors</em>. If you aren&apos;t already inside a lab, there is usually no way to work on
-          real research — no way to learn the craft, no way to build a record, no way to be credited
-          for what you did.
+          Tunisia possesses a wealth of curious and capable talent, yet it severely lacks{" "}
+          <em>access</em>. For those not already affiliated with a formal laboratory, opportunities to conduct
+          research are exceptionally rare. Without the means to develop foundational skills, establish a publication record, or receive proper academic credit, students face significant barriers to entering the research community and building long-term careers.
         </p>
         <p>
-          Open Research Tunisia is an attempt at a different arrangement. Researchers post real
+          Open Research Tunisia is an attempt to overcome this. Researchers post real
           projects with real open roles. Anyone can apply. Workshops teach the specific skills those
           projects need, free and recorded. And every contribution is logged publicly, against the
           same contributor taxonomy journals use — so credit is a matter of record, not of who you
@@ -35,24 +34,24 @@ export default function AboutPage() {
       <h2 className="mt-14 font-serif text-[26px] font-medium">How it works</h2>
       <div className="mt-5 flex flex-col gap-4">
         <Row
-          title="Projects are posted by approved leads"
-          body="Anyone can request posting rights, but an admin reviews the request — because posting a project means taking responsibility for other people's evenings."
+          title="Approved leads launch projects"
+          body="Anyone can request posting rights, but an admin reviews every request. Leading a project means committing to actively mentor and guide incoming student contributors."
         />
         <Row
           title="Contributors apply to specific roles"
-          body="Each project lists what it needs and what skills that takes. The lead reviews applications and decides. Motivation counts more than credentials."
+          body="Each project outlines its exact needs and required skills. Leads review the applications, knowing that drive and a willingness to learn often count more than past credentials."
         />
         <Row
-          title="Work happens in the open"
-          body="Resources, meeting notes, decisions and discussion live on the project page. New contributors can read the whole history before they say a word."
+          title="Research happens in the open"
+          body="Resources, meeting notes, and decisions live transparently on the project page. New contributors can absorb the entire history of a study before joining the discussion."
         />
         <Row
-          title="Workshops close the skill gap"
-          body="Free, live, recorded, and linked to a project. Attend enough sessions and you earn a certificate anyone can verify at a public URL."
+          title="Workshops bridge the knowledge gap"
+          body="These sessions are free, hosted live, recorded, and tied directly to active projects. Complete enough modules to earn a publicly verifiable certificate."
         />
         <Row
-          title="Credit is explicit"
-          body="Contributions are logged against CRediT roles — the same taxonomy used by most journals. The author line of a paper is generated from that ledger, visible to everyone, before anything is submitted."
+          title="Credit is explicit and transparent"
+          body="Contributions are tracked using standard CRediT roles—the same taxonomy used by major journals. The final author list is generated directly from this public ledger before submission."
         />
       </div>
 
