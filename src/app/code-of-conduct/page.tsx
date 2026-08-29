@@ -35,7 +35,7 @@ const SECTIONS: [string, string[]][] = [
     [
       "If you commit to hours, keep them, or say early that you can't. Silence is the costly option.",
       "Project leads: review applications within two weeks. Leaving people waiting is a real harm.",
-      "Meetings have notes. Decisions get written down. Nobody should have to attend to stay informed.",
+      "Meetings have notes. Decisions get written down.",
     ],
   ],
   [
@@ -47,10 +47,10 @@ const SECTIONS: [string, string[]][] = [
     ],
   ],
   [
-    "Harassment",
+"Harassment",
     [
-      "Harassment, discrimination, and sexual attention where it isn't wanted end participation here. There is no version of this that is tolerated.",
-      "This applies in project discussions, workshops, meetings, and anywhere people are here on behalf of the initiative.",
+      "Any form of harassment, discrimination, or bullying will result in immediate removal from the initiative. We maintain a strict zero-tolerance policy.",
+      "This applies to all project discussions, workshops, meetings, and any environment where individuals are representing or acting on behalf of the initiative.",
     ],
   ],
 ];
@@ -88,8 +88,7 @@ export default function CodeOfConductPage() {
         <p className="mt-2 max-w-[60ch] text-[14.5px] leading-[1.65] text-ink-3 pretty">
           Contact any administrator directly, or write to{" "}
           <a href="mailto:conduct@openresearch.tn">conduct@openresearch.tn</a>. Reports are handled
-          confidentially. You will never be penalised for raising one in good faith, and you may
-          report on someone else&apos;s behalf.
+          confidentially. You will never be penalised for raising one in good faith.
         </p>
       </div>
     </div>
